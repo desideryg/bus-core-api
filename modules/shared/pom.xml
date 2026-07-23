@@ -25,7 +25,7 @@
     <artifactId>shared</artifactId>
     <packaging>jar</packaging>
     <name>shared</name>
-    <description>Cross-cutting kernel (tz.co.otapp.buscore.shared): CRUD foundation, money, messaging/outbox, translation, query. Depends on no domain module.</description>
+    <description>Cross-cutting kernel: base entity, audit, outbox/messaging, paging, time, translation. A library of independent facilities, each hiding its own implementation.</description>
 
     <dependencies>
         <dependency>

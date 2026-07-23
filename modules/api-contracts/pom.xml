@@ -25,7 +25,7 @@
     <artifactId>api-contracts</artifactId>
     <packaging>jar</packaging>
     <name>api-contracts</name>
-    <description>Shared DTOs, the error catalog, and the RFC 9457 problem envelope. Code-first.</description>
+    <description>The shared wire contract: error catalog, response envelope, cross-module wire enums, permission constants. No internal package — everything here is published.</description>
 
     <dependencies>
         <dependency>
