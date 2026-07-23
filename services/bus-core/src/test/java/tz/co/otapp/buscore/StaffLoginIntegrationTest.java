@@ -311,8 +311,8 @@ class StaffLoginIntegrationTest {
     private void givenStaff(String username, String status, boolean mustChangePassword) {
         jdbc.update("""
                 INSERT INTO staff_identities (uid, username, email, display_name, tenancy, status,
-                                              created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'ADMIN', ?, now(), now())
+                                              company_uid, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'ADMIN', ?, NULL, now(), now())
                 """, UUID.randomUUID(), username, username + "@bus-core.local", username, status);
 
         jdbc.update("""
@@ -327,8 +327,8 @@ class StaffLoginIntegrationTest {
         try {
             jdbc.update("""
                     INSERT INTO staff_identities (uid, username, email, display_name, tenancy, status,
-                                                  created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, now(), now())
+                                                  company_uid, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, NULL, now(), now())
                     """, UUID.randomUUID(), username, username + "@bus-core.local", username, tenancy, status);
             return false;
         } catch (org.springframework.dao.DataAccessException refusedByConstraint) {

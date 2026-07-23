@@ -6,18 +6,22 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tz.co.otapp.buscore.apicontracts.error.ApiException;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.PermissionView;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.RoleView;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.Role;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
+import tz.co.otapp.buscore.identityaccess.PrincipalType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffRole;
+import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AuthEventType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
 import tz.co.otapp.buscore.identityaccess.internal.repository.PermissionRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.RoleRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffRoleRepository;
+import tz.co.otapp.buscore.identityaccess.internal.service.AuthAuditRecorder;
 import tz.co.otapp.buscore.identityaccess.internal.service.RoleAdministrationService;
 
 /**
@@ -27,6 +31,7 @@ import tz.co.otapp.buscore.identityaccess.internal.service.RoleAdministrationSer
  * {@code (staff, role)} means a grant is one row or none, so "already granted" is a no-op rather than a
  * duplicate, and a revoke removes the grant rather than one of two.
  */
+@RequiredArgsConstructor
 @Service
 @Transactional
 @Slf4j
@@ -36,14 +41,7 @@ public class RoleAdministrationServiceImpl implements RoleAdministrationService 
     private final PermissionRepository permissions;
     private final StaffIdentityRepository identities;
     private final StaffRoleRepository staffRoles;
-
-    public RoleAdministrationServiceImpl(RoleRepository roles, PermissionRepository permissions,
-            StaffIdentityRepository identities, StaffRoleRepository staffRoles) {
-        this.roles = roles;
-        this.permissions = permissions;
-        this.identities = identities;
-        this.staffRoles = staffRoles;
-    }
+    private final AuthAuditRecorder auditRecorder;
 
     @Override
     @Transactional(readOnly = true)
@@ -83,6 +81,7 @@ public class RoleAdministrationServiceImpl implements RoleAdministrationService 
         }
 
         staffRoles.save(StaffRole.of(staff, role));
+        auditRecorder.record(AuthEventType.ROLE_GRANTED, PrincipalType.STAFF, staffUid, roleCode);
         log.info("granted {} to {}", roleCode, staffUid);
     }
 
@@ -95,6 +94,7 @@ public class RoleAdministrationServiceImpl implements RoleAdministrationService 
         // an incident the question is "do they have it now", and an error for "they already did not" is
         // noise at the worst possible moment.
         staffRoles.deleteByStaffIdentityAndRole(staff, role);
+        auditRecorder.record(AuthEventType.ROLE_REVOKED, PrincipalType.STAFF, staffUid, roleCode);
         log.info("revoked {} from {}", roleCode, staffUid);
     }
 

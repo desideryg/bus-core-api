@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 
 /**
@@ -14,6 +15,7 @@ import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
  * names but the seed never inserted refuses everyone, and a row here that no route names grants nothing.
  * A test asserts the two agree in both directions, because neither half fails on its own.
  */
+@Getter
 @Entity
 @Table(name = "permissions")
 public class Permission extends BaseEntity {
@@ -32,13 +34,5 @@ public class Permission extends BaseEntity {
     private String description;
 
     protected Permission() {
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getDescription() {
-        return description;
     }
 }

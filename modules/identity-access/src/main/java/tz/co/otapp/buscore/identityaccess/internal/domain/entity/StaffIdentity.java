@@ -1,11 +1,14 @@
 package tz.co.otapp.buscore.identityaccess.internal.domain.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AccountStatus;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
@@ -24,6 +27,7 @@ import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
  * never drags a password hash into memory — and so the credential can be replaced without touching the
  * identity a hundred other rows refer to by uid.
  */
+@Getter
 @Entity
 @Table(name = "staff_identities")
 public class StaffIdentity extends BaseEntity {
@@ -58,17 +62,35 @@ public class StaffIdentity extends BaseEntity {
     @Column(name = "status", nullable = false, length = 32)
     private AccountStatus status;
 
+    /**
+     * The company this person belongs to, for operator staff.
+     *
+     * <p><b>Null for everyone else, and the database enforces the equivalence:</b> a staff member has a
+     * company if and only if their tenancy is {@code OPERATOR}. Platform staff belong to no tenancy, which
+     * is exactly why they may be scoped to all of it.
+     *
+     * <p>It is also the anchor of the cross-company guard. Every operator membership carries the same
+     * value and a composite foreign key holds the two together, so one credential can never reach two
+     * companies' data — not through this application, not through a data fix, and not through a future
+     * admin surface that forgot to check.
+     *
+     * <p>A bare handle into the tenancy module: no foreign key, never joined.
+     */
+    @Column(name = "company_uid")
+    private UUID companyUid;
+
     /** JPA requires it. Not for application use — see {@link #of}. */
     protected StaffIdentity() {
     }
 
     private StaffIdentity(String username, String email, String displayName, StaffTenancy tenancy,
-            AccountStatus status) {
+            AccountStatus status, UUID companyUid) {
         this.username = username;
         this.email = email;
         this.displayName = displayName;
         this.tenancy = tenancy;
         this.status = status;
+        this.companyUid = companyUid;
     }
 
     /**
@@ -78,8 +100,19 @@ public class StaffIdentity extends BaseEntity {
      * and no way to construct a half-populated row that only fails at flush time.
      */
     public static StaffIdentity of(String username, String email, String displayName, StaffTenancy tenancy,
-            AccountStatus status) {
-        return new StaffIdentity(username, email, displayName, tenancy, status);
+            AccountStatus status, UUID companyUid) {
+        return new StaffIdentity(username, email, displayName, tenancy, status, companyUid);
+    }
+
+    /**
+     * A staff member who belongs to no company — platform or partner.
+     *
+     * <p>A named factory rather than passing null, so the two cases read differently at the call site and
+     * nobody has to remember which argument the null was for.
+     */
+    public static StaffIdentity ofPlatform(String username, String email, String displayName,
+            StaffTenancy tenancy, AccountStatus status) {
+        return new StaffIdentity(username, email, displayName, tenancy, status, null);
     }
 
     /**
@@ -92,23 +125,43 @@ public class StaffIdentity extends BaseEntity {
         return status == AccountStatus.ACTIVE;
     }
 
-    public String getUsername() {
-        return username;
+    /**
+     * Whether this is the break-glass identity.
+     *
+     * <p>Asked here rather than compared at each call site, so every surface that must refuse to touch ROOT
+     * refuses it the same way, and the set of them is findable by searching for this method.
+     */
+    public boolean isRoot() {
+        return tenancy == StaffTenancy.ROOT;
     }
 
-    public String getEmail() {
-        return email;
+    /**
+     * Withdraw access, for now or for good.
+     *
+     * <p>Takes the resulting status rather than exposing a general setter: the only statuses reachable from
+     * outside are the two withdrawals and {@link #restore()}. {@code PENDING} is a state an account is born
+     * in, and no sequence of administrative actions should be able to return it there — an account that has
+     * had a password does not become one that never had one.
+     */
+    public void withdraw(AccountStatus withdrawnStatus) {
+        this.status = withdrawnStatus;
     }
 
-    public String getDisplayName() {
-        return displayName;
+    /** Return a withdrawn account to use. */
+    public void restore() {
+        this.status = AccountStatus.ACTIVE;
     }
 
-    public StaffTenancy getTenancy() {
-        return tenancy;
-    }
-
-    public AccountStatus getStatus() {
-        return status;
+    /**
+     * Complete provisioning: the account has a password now.
+     *
+     * <p>Separate from {@link #restore()} even though both end at {@code ACTIVE}, because the callers must
+     * not be interchangeable. Restoring is an administrative act with its own permission; this one happens
+     * when a holder redeems a reset token, and it must only ever move an account out of {@code PENDING} —
+     * setting a password is not permission to lift a suspension. The caller checks the status; the two
+     * method names are what keep that check from looking optional.
+     */
+    public void activate() {
+        this.status = AccountStatus.ACTIVE;
     }
 }

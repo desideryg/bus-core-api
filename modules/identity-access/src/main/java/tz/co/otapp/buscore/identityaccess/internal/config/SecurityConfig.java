@@ -27,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import tz.co.otapp.buscore.apicontracts.error.ErrorCode;
 import tz.co.otapp.buscore.apicontracts.response.ApiResponse;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
+import tz.co.otapp.buscore.identityaccess.internal.security.AudienceFilter;
 import tz.co.otapp.buscore.identityaccess.internal.security.JwtAuthenticationFilter;
 
 /**
@@ -83,6 +84,25 @@ public class SecurityConfig {
      */
     private static final String[] PUBLIC_PATHS = {
             "/admin/v1/auth/login",
+
+            // Changing a password cannot require a token, because the account most likely to need it has
+            // just been refused one: a forced rotation returns 409 and no token, deliberately, so that a
+            // rotation-pending account is not quietly fully usable. Requiring a token here would leave the
+            // holder with a password they must change and no way to change it.
+            //
+            // Not unauthenticated in substance — the current password is the authorisation, and the route
+            // counts failures and honours the lockout exactly as sign-in does.
+            "/admin/v1/auth/password",
+
+            // Redeeming a reset token is how an account that has never had a password gets its first one.
+            // There is no credential to authenticate with by definition; the 256-bit token is the proof.
+            "/admin/v1/auth/password/redeem",
+
+            // The agent door. Under an audience-scoped prefix, which is fine: AudienceFilter has no opinion
+            // on an unauthenticated request, so the gate cannot refuse the very request that would produce
+            // the token it checks for.
+            "/agent/v1/auth/login",
+
             // The walking skeleton and the orchestrator probe. Health is public because a probe cannot
             // hold a credential; the detail it exposes is already restricted by the actuator config.
             "/ping",
@@ -101,10 +121,15 @@ public class SecurityConfig {
      * <p>Strength 12 rather than the default 10 — roughly 250ms per verification, which is negligible for
      * staff sign-in volume and multiplies an offline attacker's cost fourfold.
      *
-     * <p>One encoder here is right because there is one kind of secret. When agents arrive with 4-digit
-     * PINs they need their <em>own</em> cost, deliberately chosen: a 4-digit space is exhausted in
-     * 10,000 guesses, so the work factor is the only thing standing in the way, and reusing this bean for
-     * both would silently apply a password's economics to a PIN's.
+     * <p><b>Agents reuse this bean, through {@code PinEncoder}, and the reason is worth stating</b> because
+     * an earlier note here predicted the opposite — that a PIN would need its own, higher cost.
+     *
+     * <p>It would not have helped. A work factor decides how long an offline attacker takes per candidate,
+     * and a six-digit PIN has only a million candidates: quadrupling the cost quadruples a weekend. The
+     * defence that actually changes the outcome is a key the database does not contain, so {@code
+     * PinEncoder} HMACs the PIN with a server-side pepper before handing it here. That leaves this bean
+     * doing what it is good at — the adaptive hash — and puts the part a PIN genuinely needs somewhere a
+     * stolen table does not reach.
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -115,7 +140,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter,
-            ObjectMapper objectMapper) throws Exception {
+            AudienceFilter audienceFilter, ObjectMapper objectMapper) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -126,6 +151,10 @@ public class SecurityConfig {
                 // mechanism to sit. The chain has no form login, but the position is the conventional one
                 // and keeps this filter ahead of everything that assumes a populated context.
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                // AFTER the JWT filter, because it needs a populated principal to have an opinion, and
+                // BEFORE authorisation, so a caller on the wrong surface is told that rather than being
+                // told they lack a permission no grant could ever give them.
+                .addFilterAfter(audienceFilter, JwtAuthenticationFilter.class)
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, exception) ->
                                 writeEnvelope(response, objectMapper, IdentityErrors.NOT_AUTHENTICATED))

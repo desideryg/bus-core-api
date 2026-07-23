@@ -20,6 +20,9 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
  * @param displayName how they are shown to other people
  * @param tenancy     which organisation they belong to, as the stable code
  * @param status      whether the account is usable, as the stable code
+ * @param companyUid  the company an operator account belongs to; null for everyone else. Included because
+ *                    an administrator listing accounts needs to see which company each one reaches, and it
+ *                    is the anchor of the cross-company guard
  */
 public record StaffView(
         UUID uid,
@@ -27,7 +30,8 @@ public record StaffView(
         String email,
         String displayName,
         String tenancy,
-        String status) {
+        String status,
+        UUID companyUid) {
 
     /**
      * Project an entity onto the view.
@@ -43,6 +47,7 @@ public record StaffView(
                 identity.getEmail(),
                 identity.getDisplayName(),
                 identity.getTenancy().getValue(),
-                identity.getStatus().getValue());
+                identity.getStatus().getValue(),
+                identity.getCompanyUid());
     }
 }

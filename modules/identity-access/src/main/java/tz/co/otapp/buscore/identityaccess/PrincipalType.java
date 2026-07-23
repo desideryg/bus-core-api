@@ -16,5 +16,17 @@ package tz.co.otapp.buscore.identityaccess;
 public enum PrincipalType {
 
     /** A staff member: password today, second factor later, authorised by roles. */
-    STAFF
+    STAFF,
+
+    /**
+     * A selling agent: a phone number and a PIN, authorised by selling grants — never by roles.
+     *
+     * <p>The grants live in the {@code agent} module, which is four waves later than this one and therefore
+     * invisible from here. So an agent principal's permission set is empty <b>permanently</b>, not until
+     * some later slice fills it, and {@link Principal} enforces that rather than trusting it.
+     *
+     * <p>Which is why the audience gate matters: without it, agents would be kept off the staff surface
+     * only by the coincidence that an empty set fails every permission check.
+     */
+    AGENT
 }

@@ -8,9 +8,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import tz.co.otapp.buscore.apicontracts.response.ApiResponse;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.ChangePasswordRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginResponse;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.RedeemPasswordResetRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
+import tz.co.otapp.buscore.identityaccess.internal.service.CredentialService;
 import tz.co.otapp.buscore.identityaccess.internal.service.StaffAuthenticationService;
 
 /**
@@ -38,9 +41,12 @@ import tz.co.otapp.buscore.identityaccess.internal.service.StaffAuthenticationSe
 public class StaffAuthController {
 
     private final StaffAuthenticationService staffAuthentication;
+    private final CredentialService credentials;
 
-    public StaffAuthController(StaffAuthenticationService staffAuthentication) {
+    public StaffAuthController(StaffAuthenticationService staffAuthentication,
+            CredentialService credentials) {
         this.staffAuthentication = staffAuthentication;
+        this.credentials = credentials;
     }
 
     /**
@@ -63,5 +69,33 @@ public class StaffAuthController {
     @GetMapping("/me")
     public ApiResponse<StaffView> me() {
         return ApiResponse.ok(staffAuthentication.currentStaff());
+    }
+
+    /**
+     * Change a password by presenting the current one.
+     *
+     * <p><b>Public, and that is deliberate.</b> An account required to rotate its password is refused a
+     * token at sign-in — issuing one so this endpoint could be called would make the account fully usable
+     * while nominally requiring a rotation — so the holder has no token to present here. The current
+     * password is the authorisation, which works identically whether the rotation was forced or chosen.
+     *
+     * <p>It verifies a password, so it counts failures and honours the lockout exactly as sign-in does.
+     */
+    @PostMapping("/password")
+    public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        credentials.changePassword(request);
+        return ApiResponse.done("Password changed. Sign in with the new one.");
+    }
+
+    /**
+     * Set a password using a one-time token.
+     *
+     * <p>Public because the token is the whole of the authorisation — it is how an account that has never
+     * had a password gets its first one, and how a locked-out holder recovers.
+     */
+    @PostMapping("/password/redeem")
+    public ApiResponse<Void> redeemReset(@Valid @RequestBody RedeemPasswordResetRequest request) {
+        credentials.redeemReset(request);
+        return ApiResponse.done("Password set. You can sign in now.");
     }
 }

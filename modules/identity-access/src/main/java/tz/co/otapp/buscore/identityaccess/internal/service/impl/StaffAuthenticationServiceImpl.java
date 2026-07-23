@@ -1,13 +1,16 @@
 package tz.co.otapp.buscore.identityaccess.internal.service.impl;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tz.co.otapp.buscore.apicontracts.error.ApiException;
 import tz.co.otapp.buscore.identityaccess.Principal;
@@ -18,11 +21,14 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginResponse;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffCredential;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
+import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AuthEventType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffCredentialRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepository;
+import tz.co.otapp.buscore.identityaccess.internal.repository.StaffOperatorRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffRoleRepository;
 import tz.co.otapp.buscore.identityaccess.internal.security.JwtService;
+import tz.co.otapp.buscore.identityaccess.internal.service.AuthAuditRecorder;
 import tz.co.otapp.buscore.identityaccess.internal.service.StaffAuthenticationService;
 import tz.co.otapp.buscore.shared.logging.LogSanitizer;
 import tz.co.otapp.buscore.shared.time.Times;
@@ -42,6 +48,7 @@ import tz.co.otapp.buscore.shared.time.Times;
  * the feature is simply absent. {@code noRollbackFor} is what prevents it, and it is the least obvious
  * line in this file.
  */
+@RequiredArgsConstructor
 @Service
 @Transactional(noRollbackFor = ApiException.class)
 @Slf4j
@@ -50,20 +57,11 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
     private final StaffIdentityRepository identities;
     private final StaffCredentialRepository credentials;
     private final StaffRoleRepository staffRoles;
+    private final StaffOperatorRepository staffOperators;
+    private final AuthAuditRecorder auditRecorder;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PrincipalContext principalContext;
-
-    public StaffAuthenticationServiceImpl(StaffIdentityRepository identities, StaffCredentialRepository credentials,
-            StaffRoleRepository staffRoles, PasswordEncoder passwordEncoder, JwtService jwtService,
-            PrincipalContext principalContext) {
-        this.identities = identities;
-        this.credentials = credentials;
-        this.staffRoles = staffRoles;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.principalContext = principalContext;
-    }
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -79,6 +77,9 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
             // oracle the identical error code exists to close.
             passwordEncoder.matches(request.password(), NO_SUCH_ACCOUNT_HASH);
             log.info("sign-in refused: no such identifier '{}'", LogSanitizer.clean(identifier, 128));
+            // The row with no principal. A run of these against 'admin', 'root', 'administrator' is what a
+            // spray looks like, and it is invisible if only resolved accounts are recorded.
+            auditRecorder.recordUnknownAccount(AuthEventType.LOGIN_FAILURE, identifier);
             throw invalidCredentials();
         }
 
@@ -95,6 +96,7 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
         // evaluates the password stops nothing, because the attacker's last guess is the one that matters.
         if (credential.isLockedAt(now)) {
             log.info("sign-in refused: account {} is locked until {}", identity.getUid(), credential.getLockedUntil());
+            audit(AuthEventType.LOGIN_BLOCKED_BY_LOCKOUT, identity, identifier);
             throw new ApiException(IdentityErrors.ACCOUNT_LOCKED);
         }
 
@@ -104,6 +106,12 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
             credentials.save(credential);
             log.info("sign-in refused: wrong password for {} (failures now {})",
                     identity.getUid(), credential.getFailedAttempts());
+            audit(AuthEventType.LOGIN_FAILURE, identity, identifier);
+            // A separate event, because "the fifth failure" and "the moment it locked" are different
+            // questions and an investigation asks the second one.
+            if (credential.isLockedAt(now)) {
+                audit(AuthEventType.ACCOUNT_LOCKED, identity, identifier);
+            }
             throw invalidCredentials();
         }
 
@@ -111,6 +119,7 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
         // anyone who does not already know the password.
         if (!identity.canAuthenticate()) {
             log.info("sign-in refused: account {} has status {}", identity.getUid(), identity.getStatus());
+            audit(AuthEventType.LOGIN_FAILURE, identity, identifier);
             throw invalidCredentials();
         }
 
@@ -120,14 +129,19 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
         if (credential.isMustChangePassword()) {
             // Deliberately no token. Issuing one "so the change endpoint can be called" would make the
             // account fully usable while nominally requiring a rotation.
+            audit(AuthEventType.PASSWORD_CHANGE_REQUIRED, identity, identifier);
             throw new ApiException(IdentityErrors.PASSWORD_CHANGE_REQUIRED);
         }
 
         // Resolved once, here, and carried in the token. Archived roles are excluded by the query, so
         // archiving a role actually withdraws it rather than only blocking future grants.
         Set<String> permissions = staffRoles.findPermissionCodes(identity);
+        // Resolved once, here. Platform staff legitimately have none — they belong to no tenancy and the
+        // scope resolver reads their tenancy before it ever looks at this list.
+        List<UUID> operatorUids = staffOperators.findOperatorUids(identity);
         JwtService.IssuedToken token = jwtService.issue(new Principal(
-                identity.getUid(), PrincipalType.STAFF, identity.getTenancy(), permissions));
+                identity.getUid(), PrincipalType.STAFF, identity.getTenancy(), operatorUids, permissions));
+        audit(AuthEventType.LOGIN_SUCCESS, identity, identifier);
         log.info("sign-in succeeded for {}", identity.getUid());
         return new LoginResponse(token.token(), token.expiresAt(), identity.getDisplayName());
     }
@@ -141,6 +155,10 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
                 // A valid token naming an account that no longer exists. Rare, and precisely the case a
                 // lookup must not silently return an empty body for.
                 .orElseThrow(() -> new ApiException(IdentityErrors.NOT_AUTHENTICATED));
+    }
+
+    private void audit(AuthEventType eventType, StaffIdentity identity, String identifierUsed) {
+        auditRecorder.record(eventType, PrincipalType.STAFF, identity.getUid(), identifierUsed);
     }
 
     private static ApiException invalidCredentials() {

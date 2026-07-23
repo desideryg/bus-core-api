@@ -77,6 +77,19 @@ public enum IdentityErrors implements ErrorCode {
      */
     NOT_AUTHENTICATED(401, "Authentication is required."),
 
+    /**
+     * The caller is authenticated, but is the wrong <em>kind</em> of caller for this surface.
+     *
+     * <p>Distinct from a missing permission, and the distinction matters to whoever receives it: a missing
+     * permission is fixed by a grant, while this one cannot be fixed at all — an agent will never be
+     * allowed onto the staff surface, whatever it holds. One code for both would leave a caller and a
+     * support desk unable to tell a one-line grant from an unfixable situation.
+     *
+     * <p>Safe to be distinguishable: reaching it requires having already authenticated, so it discloses
+     * only which surface the caller's own credential belongs to.
+     */
+    AUDIENCE_MISMATCH(403, "This surface is not for your kind of account."),
+
     // ───────────────────────── administration ─────────────────────────
     //
     // These are freely distinguishable, unlike the sign-in refusals above. The caller has already proved
@@ -96,7 +109,73 @@ public enum IdentityErrors implements ErrorCode {
      * staff. They share a code because the remedy is the same (choose a different role) and the message
      * says which applied.
      */
-    ROLE_NOT_GRANTABLE(409, "That role cannot be granted to this account.");
+    ROLE_NOT_GRANTABLE(409, "That role cannot be granted to this account."),
+
+    /**
+     * The username or email address is already taken.
+     *
+     * <p>409 and explicit, which reads like the account-enumeration hazard the sign-in refusals exist to
+     * avoid and is not: this caller already holds {@code STAFF.CREATE} and can list accounts outright. The
+     * alternative — a generic failure — would leave an administrator retrying a name that can never work.
+     */
+    STAFF_ALREADY_EXISTS(409, "That username or email address is already in use."),
+
+    /**
+     * The account exists but this operation may not be performed on it.
+     *
+     * <p>Covers ROOT, which no surface may suspend or restore, and the caller's own account, which they may
+     * not withdraw from under themselves. Both are refusals about the <em>target</em> rather than the
+     * caller's grants, which is why holding the permission does not help.
+     */
+    STAFF_NOT_MUTABLE(409, "That account cannot be changed here."),
+
+    /**
+     * The caller may not create or administer an account of that tenancy.
+     *
+     * <p>A privilege-escalation guard, not a missing grant: operator staff creating a platform account
+     * would mint an account more powerful than their own, and no permission should imply that.
+     */
+    TENANCY_NOT_PERMITTED(403, "You cannot administer an account of that kind."),
+
+    /**
+     * An operator account was requested without naming the company it belongs to.
+     *
+     * <p>400 rather than 403 — nothing is refused, the request is incomplete. Only platform staff can meet
+     * this, since operator staff take the company from their own account and are never asked.
+     */
+    COMPANY_REQUIRED(400, "Name the company this account belongs to."),
+
+    // ─────────────────────────── the credential lifecycle ───────────────────────────
+
+    /**
+     * The new password is the one already in use.
+     *
+     * <p>Its own code rather than a field-validation message, because it is the only password rule that
+     * cannot be checked without the stored hash. Refusing it matters most on a forced change, where
+     * "changing" the password to itself would satisfy the requirement while defeating the reason for it.
+     */
+    PASSWORD_UNCHANGED(400, "The new password must be different from the current one."),
+
+    /**
+     * The reset token is unknown, expired, or already spent.
+     *
+     * <p><b>One code for three causes, deliberately</b>, and the opposite of the rule that administrative
+     * refusals are freely distinguishable — a redemption is an unauthenticated request from somebody who
+     * has proved nothing. "Expired" tells a guesser they found a real token and should look for a fresher
+     * one; "already used" tells them the account was recently reset and is worth attention. The trail keeps
+     * the distinction; the caller does not get it.
+     */
+    RESET_TOKEN_INVALID(400, "That reset link is not usable. Ask for a new one."),
+
+    /**
+     * The PIN was correct but must be replaced before the account can be used.
+     *
+     * <p>A separate code from {@link #PASSWORD_CHANGE_REQUIRED} only because the caller-facing wording
+     * differs — an agent has a PIN, not a password, and telling them to change something they do not have
+     * is the kind of small wrongness that generates support calls. The trail records both under one event
+     * type, because internally it is the same question.
+     */
+    PIN_CHANGE_REQUIRED(409, "Your PIN must be changed before you can continue.");
 
     private final int status;
     private final String defaultMessage;

@@ -78,6 +78,14 @@ public class JwtService {
      */
     private static final String CLAIM_PERMISSIONS = "prm";
 
+    /**
+     * The operators a staff member serves.
+     *
+     * <p>Carried so the scope resolver needs no database read. Same snapshot caveat as the permissions:
+     * an operator unlinked after sign-in stays reachable until the token expires.
+     */
+    private static final String CLAIM_OPERATORS = "ops";
+
     private final JwtEncoder encoder;
     private final JwtDecoder decoder;
     private final Duration accessTokenTtl;
@@ -117,20 +125,33 @@ public class JwtService {
         Instant now = Times.now();
         Instant expiresAt = now.plus(accessTokenTtl);
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 // The uid, never the numeric id: the subject of a token is a public handle by definition.
                 .subject(principal.uid().toString())
                 .claim(CLAIM_PRINCIPAL_TYPE, principal.type().name())
-                // Written even when null/empty so a token's shape does not vary with its contents — a
-                // parser that must cope with a missing claim eventually copes by assuming a default.
-                .claim(CLAIM_TENANCY, principal.tenancy() == null ? null : principal.tenancy().name())
+                // Empty collections ARE written, so a token's shape does not vary with its contents and a
+                // parser never has to distinguish "no permissions" from "claim absent".
                 .claim(CLAIM_PERMISSIONS, List.copyOf(principal.permissions()))
-                .build();
+                .claim(CLAIM_OPERATORS, principal.operatorUids().stream().map(UUID::toString).toList());
 
-        String token = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+        // A NULL TENANCY IS OMITTED, NOT WRITTEN AS NULL. The builder rejects a null value outright — and
+        // this line was unreachable until agents existed, because every principal before them had a
+        // tenancy, so the failure sat here from slice 1 and surfaced as a 500 on the very first agent
+        // sign-in.
+        //
+        // Omitting is the right repair rather than a workaround: #parse already reads a missing tenancy
+        // claim as null, so the two sides agree, and "the claim is absent" is exactly what "this actor
+        // belongs to no staff tenancy" means. The shape-invariance argument above applies to collections,
+        // which have an empty form to write; a scalar does not.
+        if (principal.tenancy() != null) {
+            claims.claim(CLAIM_TENANCY, principal.tenancy().name());
+        }
+
+        String token = encoder
+                .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims.build()))
                 .getTokenValue();
         return new IssuedToken(token, expiresAt);
     }
@@ -150,10 +171,12 @@ public class JwtService {
             String tenancyClaim = jwt.getClaimAsString(CLAIM_TENANCY);
             StaffTenancy tenancy = tenancyClaim == null ? null : StaffTenancy.valueOf(tenancyClaim);
             List<String> permissions = jwt.getClaimAsStringList(CLAIM_PERMISSIONS);
+            List<String> operators = jwt.getClaimAsStringList(CLAIM_OPERATORS);
             return Optional.of(new Principal(
                     UUID.fromString(jwt.getSubject()),
                     type,
                     tenancy,
+                    operators == null ? List.of() : operators.stream().map(UUID::fromString).toList(),
                     permissions == null ? Set.of() : Set.copyOf(permissions)));
         } catch (JwtException | IllegalArgumentException | NullPointerException unusableToken) {
             // IllegalArgumentException covers an unparseable uuid or an unrecognised principal type — the
