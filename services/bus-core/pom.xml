@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>tz.co.otapp.buscore</groupId>
+        <artifactId>bus-core-api</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>bus-core</artifactId>
+    <name>bus-core</name>
+    <description>The single deployable: the core system. One jar, three roles, selected by Spring profile.</description>
+
+    <!--
+      Named bus-core, not bus-core-api: the artifact names the SYSTEM, the profile names the ROLE. An
+      artifact called "-api" would be lying in two of its three modes. It also cannot be called
+      bus-core-api at all — that is the reactor root's own artifactId, and Maven rejects a duplicate
+      coordinate.
+
+      The roles stay separate PROCESSES in production (a retry storm or a settlement batch must never
+      occupy a thread a customer is waiting on); what one artifact buys is one build, one version, and
+      one image to promote.
+    -->
+    <dependencies>
+        <!--
+          The two universal leaves, and for now the ONLY internal edges. Every other module is an empty
+          skeleton that builds in the reactor but is deliberately not assembled here — a module joins the
+          deployable when its first vertical slice lands. Adding it is a one-line <dependency> plus, if it
+          owns migrations, a registration in the Flyway config that slice introduces.
+        -->
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>shared</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>api-contracts</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!--
+          Actuator serves /actuator/health (liveness + readiness probes), which a container HEALTHCHECK or
+          a CI smoke gate polls. Readiness here means "the HTTP surface answers" — there is no database on
+          the classpath yet, so no `db` contributor exists and none is referenced.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!--
+          Dev-loop hot reload. optional=true keeps it off downstream classpaths, and the Boot repackage goal
+          excludes devtools from the production fat jar by default — so `java -jar bus-core.jar` is
+          unaffected. It activates only when run from an exploded classpath (mvn spring-boot:run).
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!--
+          NO PERSISTENCE YET, AND THAT IS THE POINT. No module owns an entity or a migration, so putting
+          spring-boot-starter-data-jpa here would give the scaffold an EntityManagerFactory demanding a
+          DataSource, and `mvn spring-boot:run` would fail against a Postgres nobody has started. The
+          scaffold boots with nothing running. Persistence (JPA + Flyway + the Postgres driver) joins when
+          the first entity does; flyway is already version-pinned in the root pom for that day.
+        -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          MockMvc. On Spring Boot 4 the servlet test slice moved OUT of spring-boot-starter-test into this
+          separate artifact (org.springframework.boot.webmvc.test.autoconfigure.*).
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>bus-core</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
