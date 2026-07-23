@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.validation.FieldError;
@@ -96,6 +97,29 @@ public class ApiResponseAdvice implements ResponseBodyAdvice<Object> {
         // every 404 as an error trains everyone to ignore errors.
         log.info("refused: code={} message={}", code.code(), LogSanitizer.clean(exception.getMessage(), 500));
         return render(code, exception.getMessage(), exception.details());
+    }
+
+    /**
+     * A permission check refused the caller.
+     *
+     * <p><b>This handler is not optional.</b> Method security throws from <em>inside</em> the controller
+     * invocation, so the security chain's own access-denied handler never sees it — that one only catches
+     * denials made at the filter level. Without this, every {@code @PreAuthorize} refusal in the entire
+     * application falls through to the fallback below and becomes a <b>500 with a stack trace logged at
+     * ERROR</b>: ordinary "you may not do that" answers indistinguishable from outages, and alerting full
+     * of them.
+     *
+     * <p>Handling the supertype covers both the modern denial and anything else that raises the classic
+     * {@code AccessDeniedException}.
+     *
+     * <p>The message is the generic one. Naming the missing permission would tell a caller exactly which
+     * grant to go looking for, and the set of permissions they lack maps the administrative surface.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> onAccessDenied(AccessDeniedException exception) {
+        // INFO, not ERROR: the authorisation layer working is not a failure of anything.
+        log.info("access denied: {}", exception.getClass().getSimpleName());
+        return render(CommonErrors.FORBIDDEN, CommonErrors.FORBIDDEN.defaultMessage(), List.of());
     }
 
     // ────────────────────────────── validation, both paths ──────────────────────────────

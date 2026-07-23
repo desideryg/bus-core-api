@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.apicontracts.enums.DescribedEnum;
 
 import static org.assertj.core.api.Assertions.assertThat;

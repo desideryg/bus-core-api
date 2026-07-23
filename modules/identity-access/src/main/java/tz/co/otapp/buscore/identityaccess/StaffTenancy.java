@@ -1,4 +1,4 @@
-package tz.co.otapp.buscore.identityaccess.internal.domain.enums;
+package tz.co.otapp.buscore.identityaccess;
 
 import tz.co.otapp.buscore.apicontracts.enums.DescribedEnum;
 
