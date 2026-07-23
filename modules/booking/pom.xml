@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        SCAFFOLD. Package root tz.co.otapp.buscore.booking. This module builds as a reactor jar so it can be
+        implemented, but it owns no entities, controllers, or migrations yet and is NOT a dependency of
+        services/bus-core — a module joins the deployable when its first vertical slice lands, not before.
+        Implement under internal/: the package root is the published surface, everything else is hidden.
+
+        The internal dependency list below is the module's declared edge set. It is not decoration:
+        ModuleDependencyTest asserts this pom and the DAG agree in both directions, and reads bytecode to
+        prove no class here touches a module the pom does not name. Adding an edge is an architectural
+        decision — change the pom and the DAG in the same commit.
+    -->
+    <parent>
+        <groupId>tz.co.otapp.buscore</groupId>
+        <artifactId>bus-core-api</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>booking</artifactId>
+    <packaging>jar</packaging>
+    <name>booking</name>
+    <description>Booking lifecycle and idempotent booking creation; the sale-orchestration seam. Coordinates, does not decide.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>shared</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>api-contracts</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>identity-access</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>scheduling</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>fare</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>seat-inventory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>quota</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>network</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>tenancy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>promotions</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>customer-identity</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

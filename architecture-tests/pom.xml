@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>tz.co.otapp.buscore</groupId>
+        <artifactId>bus-core-api</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>architecture-tests</artifactId>
+    <packaging>jar</packaging>
+    <name>architecture-tests</name>
+    <description>ArchUnit rules that police the module DAG and the internal-package boundary.</description>
+
+    <!--
+      Every reactor module is declared here, and every one of them is an empty skeleton today — which is
+      exactly why they are declared BEFORE they grow code. @AnalyzeClasses is SILENT about code it cannot
+      see, and what it can see is decided entirely by this pom. A module that joins the reactor without
+      joining this list is a module every rule below reports green on while checking nothing.
+
+      AnalysisClasspathTest fails the build if this list ever falls behind modules/, so the guarantee does
+      not depend on anyone remembering. The first controller any of these modules gains is then born under
+      the rules rather than having to be retrofitted into them.
+
+      Keep the <version>${project.version}</version> element on each entry: AnalysisClasspathTest matches
+      that exact shape when it reads this file.
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>shared</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>api-contracts</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>identity-access</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>storage</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>documents</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>tenancy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>network</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>fleet</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>staff</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>quota</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>exchange-rate</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>promotions</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>reporting</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>accounting-ledger</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>customer-identity</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>agent</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>scheduling</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>fare</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>seat-inventory</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>wallet-ledger</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>booking</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>payment-settlement</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>notification</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>payment-gateway-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>uts-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>fiscal-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>charter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- ArchUnit's JUnit 5 integration: @AnalyzeClasses + @ArchTest field discovery. -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Brings JUnit 5 and AssertJ onto the test classpath. No application context is started. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

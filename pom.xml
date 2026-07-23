@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>tz.co.otapp.buscore</groupId>
+    <artifactId>bus-core-api</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>bus-core-api</name>
+    <description>Bus core platform — reactor aggregator (scaffold).</description>
+
+    <properties>
+        <!--
+          Pinned to the JDK actually installed. Spring Boot's parent maps java.version straight to
+          maven.compiler.release, so a release above the local toolchain makes javac fail outright — which
+          also blanks the IDE classpath and reports every type in the tree as unresolved. Nothing here uses
+          a language feature above 21. Move it on CI first, so CI and developer machines cannot drift.
+
+          Overridable without editing this file:  mvn -Djava.version=25 ...
+        -->
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!--
+          Pinned here so the versions exist the moment the first slice needs them, without a second
+          decision being made under pressure. Nothing on the deployable's classpath references them yet.
+        -->
+        <flyway.version>12.11.0</flyway.version>
+        <archunit.version>1.4.2</archunit.version>
+    </properties>
+
+    <!--
+      ONE deployable, services/bus-core, which plays the api / worker / gateway role by Spring profile.
+      The domain modules stay separate Maven artifacts, and that separation is the enforcement rather than
+      packaging ceremony: a module that does not declare a dependency physically cannot import the other,
+      so javac rejects an illegal edge before ArchUnit is even loaded. Boot nests the module jars inside
+      bus-core.jar at repackage time, so the deployable really is a single file.
+
+      Listed in build-spine order (foundations, then reference data, then the sale, then adapters). Maven
+      orders the reactor from the dependency graph, so this order is documentation, not scheduling.
+
+      Every module below is an EMPTY SKELETON: a pom, a package-info at the module root, and a package-info
+      under internal/. They build as reactor jars so they can be implemented, and are deliberately NOT yet
+      dependencies of services/bus-core — a module joins the deployable when its first vertical slice
+      (entities + migrations + config) lands, never before.
+    -->
+    <modules>
+        <module>modules/shared</module>
+        <module>modules/api-contracts</module>
+        <module>modules/identity-access</module>
+        <module>modules/storage</module>
+        <module>modules/documents</module>
+        <module>modules/tenancy</module>
+        <module>modules/network</module>
+        <module>modules/fleet</module>
+        <module>modules/staff</module>
+        <module>modules/quota</module>
+        <module>modules/exchange-rate</module>
+        <module>modules/promotions</module>
+        <module>modules/reporting</module>
+        <module>modules/accounting-ledger</module>
+        <module>modules/customer-identity</module>
+        <module>modules/agent</module>
+        <module>modules/scheduling</module>
+        <module>modules/fare</module>
+        <module>modules/seat-inventory</module>
+        <module>modules/wallet-ledger</module>
+        <module>modules/booking</module>
+        <module>modules/payment-settlement</module>
+        <module>modules/notification</module>
+        <module>modules/payment-gateway-adapter</module>
+        <module>modules/uts-adapter</module>
+        <module>modules/fiscal-adapter</module>
+        <module>modules/charter</module>
+
+        <module>services/bus-core</module>
+        <module>architecture-tests</module>
+    </modules>
+
+    <!--
+      Lombok, inherited by every module so no child repeats it.
+
+      scope=provided keeps it off the runtime classpath of anything consuming these jars. It does NOT, on
+      its own, keep it out of the deployable: spring-boot-maven-plugin packages provided-scope dependencies
+      into BOOT-INF/lib by default, which is why spring-boot-starter-parent normally ships an explicit
+      repackage exclusion for lombok. That exclusion is absent from starter-parent 4.1.0, so it is declared
+      in pluginManagement below.
+
+      The version comes from the Boot BOM. Do not pin it lower: Lombok below 1.18.40 cannot read the
+      class-file versions the newer JDKs emit.
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Internal reactor artifacts: the version is pinned once, here, so no child ever names it. -->
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>shared</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>api-contracts</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>identity-access</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>storage</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>documents</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>tenancy</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>network</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>fleet</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>staff</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>quota</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>exchange-rate</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>promotions</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>reporting</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>accounting-ledger</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>customer-identity</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>agent</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>scheduling</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>fare</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>seat-inventory</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>wallet-ledger</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>booking</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>payment-settlement</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>notification</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>payment-gateway-adapter</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>uts-adapter</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>fiscal-adapter</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>tz.co.otapp.buscore</groupId>
+                <artifactId>charter</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+            </dependency>
+
+            <!--
+              Flyway, aligned across the tree, overriding the Boot BOM. Nothing depends on it yet: it is
+              pinned here so the first module to own a migration inherits a decided version.
+
+              Note for that first slice: Flyway on Spring Boot 4 needs BOTH artifacts — flyway-core carries
+              the engine, flyway-database-postgresql carries the PostgreSQL dialect. Omitting the latter is
+              what raises "Unsupported Database: PostgreSQL" at startup; it is not a version mismatch.
+            -->
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-core</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+
+            <!-- ArchUnit, for the architecture-tests module. -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <!--
+                          Keep the annotation processor out of the deployable. scope=provided is NOT enough
+                          on its own: this plugin packages provided-scope dependencies into BOOT-INF/lib by
+                          default, which is why spring-boot-starter-parent normally ships this very
+                          exclusion. It is absent from starter-parent 4.1.0, so it is declared here.
+                        -->
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

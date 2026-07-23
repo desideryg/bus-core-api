@@ -1,0 +1,80 @@
+# One jar, three roles.
+#
+#   java -jar bus-core.jar --spring.profiles.active=api
+#   java -jar bus-core.jar --spring.profiles.active=worker
+#   java -jar bus-core.jar --spring.profiles.active=gateway
+#
+# The artifact carries one name; observability wants three. spring.application.name is set per profile
+# below, so traces, metrics, and log lines tell the roles apart even though they ship in one jar.
+#
+# There is NO datasource block, and its absence is deliberate rather than unfinished: no module owns an
+# entity or a migration yet, so nothing on the classpath asks for a DataSource and the scaffold starts
+# with no Postgres, no Valkey, and no broker running. Persistence configuration arrives in the same slice
+# as the first entity.
+spring:
+  profiles:
+    # Running with no role would start a process that serves nothing and sweeps nothing.
+    default: api
+    group:
+      # `dev` is dev-run convenience: it activates the api role and layers application-dev.yml on top.
+      dev: api
+
+# Actuator/Micrometer. The exposed surface is deliberately small: health (the probe target for a container
+# HEALTHCHECK or an orchestrator) and info. show-details: when_authorized means an anonymous probe sees
+# only {"status":"UP"} and never the disk/component breakdown.
+#
+# Readiness is readinessState alone. When the first datasource lands, add `db` to the readiness group —
+# the api role must not receive traffic before migrations have run and the pool is live.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState
+
+---
+spring:
+  config:
+    activate:
+      on-profile: api
+  application:
+    name: bus-core-api
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    # /api is the single context-path for the whole HTTP surface, so no controller mapping repeats it.
+    # Every audience serves beneath it: staff at /api/v1/**, agents at /api/agent/v1/**, callbacks at
+    # /api/callbacks/**. A servlet context-path is GLOBAL — it cannot cover /api/v1 without also covering
+    # /agent/v1 — so the audiences sit under one /api root by design.
+    context-path: /api
+
+---
+spring:
+  config:
+    activate:
+      on-profile: worker
+  application:
+    name: bus-core-worker
+  main:
+    # The worker serves no HTTP. The web starter is on the classpath because this is one jar for every
+    # role; switching it off here is what stops the worker binding a port it never uses.
+    web-application-type: none
+
+---
+spring:
+  config:
+    activate:
+      on-profile: gateway
+  application:
+    name: bus-core-gateway
+server:
+  port: ${GATEWAY_PORT:8081}
+  servlet:
+    context-path: /api
