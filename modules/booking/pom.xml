@@ -74,7 +74,7 @@
         </dependency>
         <dependency>
             <groupId>tz.co.otapp.buscore</groupId>
-            <artifactId>customer-identity</artifactId>
+            <artifactId>customer</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

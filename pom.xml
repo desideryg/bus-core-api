@@ -68,7 +68,7 @@
         <module>modules/promotions</module>
         <module>modules/reporting</module>
         <module>modules/accounting-ledger</module>
-        <module>modules/customer-identity</module>
+        <module>modules/customer</module>
         <module>modules/agent</module>
         <module>modules/scheduling</module>
         <module>modules/fare</module>
@@ -181,7 +181,7 @@
             </dependency>
             <dependency>
                 <groupId>tz.co.otapp.buscore</groupId>
-                <artifactId>customer-identity</artifactId>
+                <artifactId>customer</artifactId>
                 <version>0.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>

@@ -102,7 +102,7 @@
         </dependency>
         <dependency>
             <groupId>tz.co.otapp.buscore</groupId>
-            <artifactId>customer-identity</artifactId>
+            <artifactId>customer</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

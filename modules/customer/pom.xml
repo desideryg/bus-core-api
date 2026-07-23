@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-        SCAFFOLD. Package root tz.co.otapp.buscore.customeridentity. This module builds as a reactor jar so it can be
+        SCAFFOLD. Package root tz.co.otapp.buscore.customer. This module builds as a reactor jar so it can be
         implemented, but it owns no entities, controllers, or migrations yet and is NOT a dependency of
         services/bus-core — a module joins the deployable when its first vertical slice lands, not before.
         Implement under internal/: the package root is the published surface, everything else is hidden.
@@ -22,9 +22,9 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>customer-identity</artifactId>
+    <artifactId>customer</artifactId>
     <packaging>jar</packaging>
-    <name>customer-identity</name>
+    <name>customer</name>
     <description>Passenger master identity: golden record, dedup/merge, resolve-or-create. Distinct from identity-access.</description>
 
     <dependencies>

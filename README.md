@@ -127,7 +127,7 @@ Two shapes to prefer, both of which keep the DAG acyclic:
   reverse would be a cycle waiting to happen.
 - **Hold uids, not foreign keys.** A module that stores another module's identifier as a bare handle, and
   resolves it against nothing, needs no edge at all. `documents` depends on no owner module for exactly
-  this reason — which is what lets `fleet`, `tenancy`, `staff`, `agent` and `customer-identity` all
+  this reason — which is what lets `fleet`, `tenancy`, `staff`, `agent` and `customer` all
   depend on `documents` without one.
 
 ## Deliberately not here yet

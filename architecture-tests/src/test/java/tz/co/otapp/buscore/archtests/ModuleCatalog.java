@@ -55,10 +55,10 @@ final class ModuleCatalog {
         DAG.put("promotions", Set.of("shared", "api-contracts", "identity-access"));
         DAG.put("reporting", Set.of("shared", "api-contracts"));
         DAG.put("accounting-ledger", Set.of("shared", "api-contracts"));
-        // customer-identity is the passenger golden record, and platform-global on purpose: no row here
+        // customer is the passenger golden record, and platform-global on purpose: no row here
         // carries an operator_uid. No tenancy or agent edge — naming a tenant would re-fracture the
         // traveller into per-operator identities, which is the whole thing this module exists to prevent.
-        DAG.put("customer-identity", Set.of("shared", "api-contracts", "identity-access", "documents"));
+        DAG.put("customer", Set.of("shared", "api-contracts", "identity-access", "documents"));
 
         // Tier 2 — the selling identity, the timetable, the price, and the seat.
         DAG.put("agent",
@@ -74,7 +74,7 @@ final class ModuleCatalog {
 
         // Tier 3 — the sale itself.
         DAG.put("booking", Set.of("shared", "api-contracts", "identity-access", "agent", "scheduling", "fare",
-                "seat-inventory", "quota", "network", "tenancy", "promotions", "customer-identity"));
+                "seat-inventory", "quota", "network", "tenancy", "promotions", "customer"));
         DAG.put("payment-settlement", Set.of("shared", "api-contracts", "identity-access", "booking", "agent",
                 "wallet-ledger", "scheduling", "promotions"));
         DAG.put("notification", Set.of("shared", "api-contracts", "identity-access", "booking", "payment-settlement",
