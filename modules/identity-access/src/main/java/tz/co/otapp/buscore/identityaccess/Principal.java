@@ -47,6 +47,26 @@ public record Principal(
         // produce a principal whose collections explode on first use.
         operatorUids = operatorUids == null ? List.of() : List.copyOf(operatorUids);
         permissions = permissions == null ? Set.of() : Set.copyOf(permissions);
+
+        // AN AGENT HOLDS NOTHING, AND THAT IS ENFORCED RATHER THAN DOCUMENTED.
+        //
+        // Agents are authorised by selling grants in the `agent` module — four waves later, and invisible
+        // from here. This module cannot resolve an agent's authority, so it must never assert any.
+        //
+        // Until now that was true only by accident: nothing built an agent principal with permissions, so
+        // every gated route refused them. Audience's own javadoc calls that out — a fact about an empty
+        // collection rather than a decision anybody made, which stops being true the moment something
+        // populates the set.
+        //
+        // Checking it here makes it a decision. The payoff is at the token boundary: JwtService#parse
+        // catches IllegalArgumentException and returns empty, so a FORGED TOKEN claiming AGENT with a
+        // populated permissions claim is not a privileged principal — it is an unusable token, refused the
+        // same way a bad signature is.
+        if (type == PrincipalType.AGENT && (!permissions.isEmpty() || tenancy != null
+                || !operatorUids.isEmpty())) {
+            throw new IllegalArgumentException(
+                    "An agent principal carries no permissions, tenancy or operators.");
+        }
     }
 
     /**

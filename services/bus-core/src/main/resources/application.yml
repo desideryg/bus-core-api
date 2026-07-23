@@ -76,6 +76,12 @@ identity:
     # it out of band and act on it, and shorter than a working day because it is a bearer credential: for
     # as long as it lives, whoever holds it can take the account.
     ttl: ${IDENTITY_PASSWORD_RESET_TTL:PT2H}
+  agent:
+    # A server-side key mixed into every PIN before hashing. NOT a usable default: a six-digit PIN is a
+    # million candidates, so whoever holds the credentials table and this value can exhaust it offline —
+    # which is exactly why the value must not live beside the table, and must differ per environment.
+    # Rotating it invalidates every PIN, so treat it as a one-way decision.
+    pin-pepper: ${IDENTITY_AGENT_PIN_PEPPER:local-development-only-pin-pepper-change-me-32b+}
   bootstrap:
     root:
       username: ${IDENTITY_BOOTSTRAP_ROOT_USERNAME:root}

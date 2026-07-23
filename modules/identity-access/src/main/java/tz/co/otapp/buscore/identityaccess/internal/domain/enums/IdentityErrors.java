@@ -165,7 +165,17 @@ public enum IdentityErrors implements ErrorCode {
      * one; "already used" tells them the account was recently reset and is worth attention. The trail keeps
      * the distinction; the caller does not get it.
      */
-    RESET_TOKEN_INVALID(400, "That reset link is not usable. Ask for a new one.");
+    RESET_TOKEN_INVALID(400, "That reset link is not usable. Ask for a new one."),
+
+    /**
+     * The PIN was correct but must be replaced before the account can be used.
+     *
+     * <p>A separate code from {@link #PASSWORD_CHANGE_REQUIRED} only because the caller-facing wording
+     * differs — an agent has a PIN, not a password, and telling them to change something they do not have
+     * is the kind of small wrongness that generates support calls. The trail records both under one event
+     * type, because internally it is the same question.
+     */
+    PIN_CHANGE_REQUIRED(409, "Your PIN must be changed before you can continue.");
 
     private final int status;
     private final String defaultMessage;

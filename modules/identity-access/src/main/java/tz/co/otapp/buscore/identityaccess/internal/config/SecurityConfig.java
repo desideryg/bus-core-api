@@ -98,6 +98,11 @@ public class SecurityConfig {
             // There is no credential to authenticate with by definition; the 256-bit token is the proof.
             "/admin/v1/auth/password/redeem",
 
+            // The agent door. Under an audience-scoped prefix, which is fine: AudienceFilter has no opinion
+            // on an unauthenticated request, so the gate cannot refuse the very request that would produce
+            // the token it checks for.
+            "/agent/v1/auth/login",
+
             // The walking skeleton and the orchestrator probe. Health is public because a probe cannot
             // hold a credential; the detail it exposes is already restricted by the actuator config.
             "/ping",
@@ -116,10 +121,15 @@ public class SecurityConfig {
      * <p>Strength 12 rather than the default 10 — roughly 250ms per verification, which is negligible for
      * staff sign-in volume and multiplies an offline attacker's cost fourfold.
      *
-     * <p>One encoder here is right because there is one kind of secret. When agents arrive with 4-digit
-     * PINs they need their <em>own</em> cost, deliberately chosen: a 4-digit space is exhausted in
-     * 10,000 guesses, so the work factor is the only thing standing in the way, and reusing this bean for
-     * both would silently apply a password's economics to a PIN's.
+     * <p><b>Agents reuse this bean, through {@code PinEncoder}, and the reason is worth stating</b> because
+     * an earlier note here predicted the opposite — that a PIN would need its own, higher cost.
+     *
+     * <p>It would not have helped. A work factor decides how long an offline attacker takes per candidate,
+     * and a six-digit PIN has only a million candidates: quadrupling the cost quadruples a weekend. The
+     * defence that actually changes the outcome is a key the database does not contain, so {@code
+     * PinEncoder} HMACs the PIN with a server-side pepper before handing it here. That leaves this bean
+     * doing what it is good at — the adaptive hash — and puts the part a PIN genuinely needs somewhere a
+     * stolen table does not reach.
      */
     @Bean
     public PasswordEncoder passwordEncoder() {

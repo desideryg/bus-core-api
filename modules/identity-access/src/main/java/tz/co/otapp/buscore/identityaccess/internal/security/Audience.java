@@ -36,10 +36,13 @@ enum Audience {
     /**
      * Selling agents and, later, machine clients.
      *
-     * <p>Nothing serves this prefix yet. It is reserved anyway, so that a staff token cannot reach an agent
-     * route the day one appears — and so the reservation is a fact rather than an intention.
+     * <p>Reserved empty in slice 3 so that a staff token could not reach an agent route the day one
+     * appeared. Slice 7 opens it to agents and to nobody else — a staff token is still refused here, which
+     * is the half of the gate that has no other enforcement anywhere: an agent is kept off the staff
+     * surface by an empty permission set as well, but <b>nothing stops a staff member on an agent route
+     * except this line</b>.
      */
-    AGENT("/agent/v1/", Set.of());
+    AGENT("/agent/v1/", Set.of(PrincipalType.AGENT));
 
     private final String pathPrefix;
     private final Set<PrincipalType> permitted;
