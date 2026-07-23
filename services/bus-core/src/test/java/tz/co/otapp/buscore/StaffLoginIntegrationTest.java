@@ -271,18 +271,18 @@ class StaffLoginIntegrationTest {
     // ───────────────────────────────── the bootstrap ─────────────────────────────────
 
     @Test
-    @DisplayName("the bootstrap ROOT exists but must change its password before it can be used")
-    void root_is_created_and_must_rotate() throws Exception {
+    @DisplayName("the bootstrap ROOT exists and signs in with the configured password")
+    void root_is_created_and_usable() throws Exception {
         Integer roots = jdbc.queryForObject(
                 "SELECT count(*) FROM staff_identities WHERE tenancy = 'ROOT'", Integer.class);
         assertThat(roots).isEqualTo(1);
 
-        // The correct password, and still no token: the configured value has necessarily been seen by
-        // whoever deployed it, so the account cannot be usable until it is rotated.
+        // must-change-password defaults to false, so the configured value works immediately — the deployer
+        // is trusted to have supplied a strong one. Where it might be exposed, setting
+        // identity.bootstrap.root.must-change-password=true makes this a 409 until it is rotated.
         mockMvc.perform(loginAs("root", "bootstrap-secret-for-tests"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("AUTH.PASSWORD_CHANGE_REQUIRED"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken").exists());
     }
 
     // ─────────────────────────────────── helpers ───────────────────────────────────
