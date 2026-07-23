@@ -83,6 +83,19 @@ public record ApiResponse<T>(
     }
 
     /**
+     * 201 with the thing that was created.
+     *
+     * <p>The payload is the created resource rather than a bare uid, so the caller does not have to fetch
+     * what it just made in order to learn the server-assigned fields.
+     *
+     * <p>No {@code Location} header: the envelope already carries the uid, and a header on some responses
+     * and not others is exactly the second shape this type exists to prevent.
+     */
+    public static <T> ApiResponse<T> created(T data, String message) {
+        return new ApiResponse<>(true, 201, OK, message, data, List.of(), null, null);
+    }
+
+    /**
      * 200 with a page of results.
      *
      * <p>The payload stays a plain list and the paging numbers go in {@code meta}, so paging can later gain

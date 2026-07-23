@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
@@ -78,10 +79,21 @@ public class ApiResponseAdvice implements ResponseBodyAdvice<Object> {
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType contentType,
             Class<? extends HttpMessageConverter<?>> converterType,
             ServerHttpRequest request, ServerHttpResponse response) {
-        if (body instanceof ApiResponse<?> envelope && envelope.traceId() == null) {
-            return envelope.withTraceId(newTraceId());
+        if (!(body instanceof ApiResponse<?> envelope)) {
+            return body;
         }
-        return body;
+
+        // THE ENVELOPE'S STATUS IS THE RESPONSE'S STATUS. A handler returning ApiResponse.created(...) says
+        // 201 in the body; without this line the transport still says 200, and the two disagree on the one
+        // field the whole envelope derives `success` from. Making the body authoritative means a handler
+        // never has to remember to wrap itself in a ResponseEntity just to get the status right.
+        //
+        // Set unconditionally rather than only when it differs — ServerHttpResponse has no getter, and
+        // writing the value that is already there costs nothing. On the refusal paths below it is exactly a
+        // no-op: they build a ResponseEntity whose status came from the same ErrorCode the envelope did.
+        response.setStatusCode(HttpStatusCode.valueOf(envelope.statusCode()));
+
+        return envelope.traceId() == null ? envelope.withTraceId(newTraceId()) : envelope;
     }
 
     // ─────────────────────────────────── refusals ───────────────────────────────────

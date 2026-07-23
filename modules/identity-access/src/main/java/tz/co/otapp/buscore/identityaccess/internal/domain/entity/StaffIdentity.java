@@ -123,6 +123,33 @@ public class StaffIdentity extends BaseEntity {
         return status == AccountStatus.ACTIVE;
     }
 
+    /**
+     * Whether this is the break-glass identity.
+     *
+     * <p>Asked here rather than compared at each call site, so every surface that must refuse to touch ROOT
+     * refuses it the same way, and the set of them is findable by searching for this method.
+     */
+    public boolean isRoot() {
+        return tenancy == StaffTenancy.ROOT;
+    }
+
+    /**
+     * Withdraw access, for now or for good.
+     *
+     * <p>Takes the resulting status rather than exposing a general setter: the only statuses reachable from
+     * outside are the two withdrawals and {@link #restore()}. {@code PENDING} is a state an account is born
+     * in, and no sequence of administrative actions should be able to return it there — an account that has
+     * had a password does not become one that never had one.
+     */
+    public void withdraw(AccountStatus withdrawnStatus) {
+        this.status = withdrawnStatus;
+    }
+
+    /** Return a withdrawn account to use. */
+    public void restore() {
+        this.status = AccountStatus.ACTIVE;
+    }
+
     public String getUsername() {
         return username;
     }

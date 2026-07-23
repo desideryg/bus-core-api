@@ -109,7 +109,41 @@ public enum IdentityErrors implements ErrorCode {
      * staff. They share a code because the remedy is the same (choose a different role) and the message
      * says which applied.
      */
-    ROLE_NOT_GRANTABLE(409, "That role cannot be granted to this account.");
+    ROLE_NOT_GRANTABLE(409, "That role cannot be granted to this account."),
+
+    /**
+     * The username or email address is already taken.
+     *
+     * <p>409 and explicit, which reads like the account-enumeration hazard the sign-in refusals exist to
+     * avoid and is not: this caller already holds {@code STAFF.CREATE} and can list accounts outright. The
+     * alternative — a generic failure — would leave an administrator retrying a name that can never work.
+     */
+    STAFF_ALREADY_EXISTS(409, "That username or email address is already in use."),
+
+    /**
+     * The account exists but this operation may not be performed on it.
+     *
+     * <p>Covers ROOT, which no surface may suspend or restore, and the caller's own account, which they may
+     * not withdraw from under themselves. Both are refusals about the <em>target</em> rather than the
+     * caller's grants, which is why holding the permission does not help.
+     */
+    STAFF_NOT_MUTABLE(409, "That account cannot be changed here."),
+
+    /**
+     * The caller may not create or administer an account of that tenancy.
+     *
+     * <p>A privilege-escalation guard, not a missing grant: operator staff creating a platform account
+     * would mint an account more powerful than their own, and no permission should imply that.
+     */
+    TENANCY_NOT_PERMITTED(403, "You cannot administer an account of that kind."),
+
+    /**
+     * An operator account was requested without naming the company it belongs to.
+     *
+     * <p>400 rather than 403 — nothing is refused, the request is incomplete. Only platform staff can meet
+     * this, since operator staff take the company from their own account and are never asked.
+     */
+    COMPANY_REQUIRED(400, "Name the company this account belongs to.");
 
     private final int status;
     private final String defaultMessage;

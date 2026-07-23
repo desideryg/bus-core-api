@@ -37,7 +37,33 @@ public enum AuthEventType implements DescribedEnum {
     ROLE_GRANTED("Role granted", "A role was added to a staff account."),
 
     /** A role was taken away. */
-    ROLE_REVOKED("Role revoked", "A role was removed from a staff account.");
+    ROLE_REVOKED("Role revoked", "A role was removed from a staff account."),
+
+    /** An account came into existence. The first entry in its history, and the one that names its creator. */
+    STAFF_CREATED("Staff account created", "A staff login identity was provisioned."),
+
+    /**
+     * Access was withdrawn, whether for now or for good.
+     *
+     * <p>One event for both, with the resulting status recorded alongside: the question afterwards is
+     * "when did this account stop working, and who stopped it", and splitting it in two would mean asking
+     * it twice.
+     */
+    STAFF_SUSPENDED("Staff access withdrawn", "A staff account was suspended or blocked."),
+
+    /** Access was returned. */
+    STAFF_RESTORED("Staff access restored", "A withdrawn staff account was returned to use."),
+
+    /**
+     * A staff member gained reach over another operator.
+     *
+     * <p>Recorded because it is a widening of access that no role grant would show: two people holding
+     * identical roles can see entirely different rows, and this is the only record of why.
+     */
+    OPERATOR_LINKED("Operator linked", "A staff account was attached to an operator."),
+
+    /** A staff member lost reach over an operator. */
+    OPERATOR_UNLINKED("Operator unlinked", "A staff account was detached from an operator.");
 
     private final String name;
     private final String description;
