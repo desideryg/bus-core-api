@@ -3,7 +3,9 @@ package tz.co.otapp.buscore.identityaccess.internal.security;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.crypto.SecretKey;
@@ -26,6 +28,7 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
 import tz.co.otapp.buscore.identityaccess.Principal;
 import tz.co.otapp.buscore.identityaccess.PrincipalType;
+import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.shared.time.Times;
 
 /**
@@ -63,6 +66,17 @@ public class JwtService {
 
     /** Claim naming the kind of actor, so a future agent token cannot be mistaken for a staff one. */
     private static final String CLAIM_PRINCIPAL_TYPE = "typ";
+
+    /** The staff tenancy. Absent for a non-staff principal, which is how the guard tells them apart. */
+    private static final String CLAIM_TENANCY = "ten";
+
+    /**
+     * The flattened permission codes.
+     *
+     * <p>Carried in the token rather than resolved per request, which trades freshness for a database
+     * round trip on every call. See {@link Principal} for what that costs and why the lifetime is short.
+     */
+    private static final String CLAIM_PERMISSIONS = "prm";
 
     private final JwtEncoder encoder;
     private final JwtDecoder decoder;
@@ -110,6 +124,10 @@ public class JwtService {
                 // The uid, never the numeric id: the subject of a token is a public handle by definition.
                 .subject(principal.uid().toString())
                 .claim(CLAIM_PRINCIPAL_TYPE, principal.type().name())
+                // Written even when null/empty so a token's shape does not vary with its contents — a
+                // parser that must cope with a missing claim eventually copes by assuming a default.
+                .claim(CLAIM_TENANCY, principal.tenancy() == null ? null : principal.tenancy().name())
+                .claim(CLAIM_PERMISSIONS, List.copyOf(principal.permissions()))
                 .build();
 
         String token = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
@@ -129,7 +147,14 @@ public class JwtService {
         try {
             Jwt jwt = decoder.decode(token);
             PrincipalType type = PrincipalType.valueOf(jwt.getClaimAsString(CLAIM_PRINCIPAL_TYPE));
-            return Optional.of(new Principal(UUID.fromString(jwt.getSubject()), type));
+            String tenancyClaim = jwt.getClaimAsString(CLAIM_TENANCY);
+            StaffTenancy tenancy = tenancyClaim == null ? null : StaffTenancy.valueOf(tenancyClaim);
+            List<String> permissions = jwt.getClaimAsStringList(CLAIM_PERMISSIONS);
+            return Optional.of(new Principal(
+                    UUID.fromString(jwt.getSubject()),
+                    type,
+                    tenancy,
+                    permissions == null ? Set.of() : Set.copyOf(permissions)));
         } catch (JwtException | IllegalArgumentException | NullPointerException unusableToken) {
             // IllegalArgumentException covers an unparseable uuid or an unrecognised principal type — the
             // shape of a token minted by an older or a forged issuer.

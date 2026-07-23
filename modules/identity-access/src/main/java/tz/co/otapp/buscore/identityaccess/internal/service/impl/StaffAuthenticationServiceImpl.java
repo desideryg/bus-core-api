@@ -2,6 +2,7 @@ package tz.co.otapp.buscore.identityaccess.internal.service.impl;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffCredentialRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepository;
+import tz.co.otapp.buscore.identityaccess.internal.repository.StaffRoleRepository;
 import tz.co.otapp.buscore.identityaccess.internal.security.JwtService;
 import tz.co.otapp.buscore.identityaccess.internal.service.StaffAuthenticationService;
 import tz.co.otapp.buscore.shared.logging.LogSanitizer;
@@ -47,14 +49,17 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
 
     private final StaffIdentityRepository identities;
     private final StaffCredentialRepository credentials;
+    private final StaffRoleRepository staffRoles;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PrincipalContext principalContext;
 
     public StaffAuthenticationServiceImpl(StaffIdentityRepository identities, StaffCredentialRepository credentials,
-            PasswordEncoder passwordEncoder, JwtService jwtService, PrincipalContext principalContext) {
+            StaffRoleRepository staffRoles, PasswordEncoder passwordEncoder, JwtService jwtService,
+            PrincipalContext principalContext) {
         this.identities = identities;
         this.credentials = credentials;
+        this.staffRoles = staffRoles;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.principalContext = principalContext;
@@ -118,7 +123,11 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
             throw new ApiException(IdentityErrors.PASSWORD_CHANGE_REQUIRED);
         }
 
-        JwtService.IssuedToken token = jwtService.issue(new Principal(identity.getUid(), PrincipalType.STAFF));
+        // Resolved once, here, and carried in the token. Archived roles are excluded by the query, so
+        // archiving a role actually withdraws it rather than only blocking future grants.
+        Set<String> permissions = staffRoles.findPermissionCodes(identity);
+        JwtService.IssuedToken token = jwtService.issue(new Principal(
+                identity.getUid(), PrincipalType.STAFF, identity.getTenancy(), permissions));
         log.info("sign-in succeeded for {}", identity.getUid());
         return new LoginResponse(token.token(), token.expiresAt(), identity.getDisplayName());
     }
