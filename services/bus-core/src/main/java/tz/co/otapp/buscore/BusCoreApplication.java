@@ -49,8 +49,14 @@ import lombok.extern.slf4j.Slf4j;
         excludeFilters = {
                 @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
                 @Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class),
+                // Everything under a module's internal/ EXCEPT internal.config. Stated as "not config"
+                // rather than as a list of the packages that exist today, because a list has to be edited
+                // every time a module grows a package — and the edit that is forgotten does not fail, it
+                // silently hands the assembler beans the module's own configuration was gating. Adding
+                // internal/domain/ to one module was enough to expose that: the list did not mention it,
+                // so it would have been scanned.
                 @Filter(type = FilterType.REGEX,
-                        pattern = "tz\\.co\\.otapp\\.buscore\\..*\\.internal\\.(service|security|api|entity|repository)\\..*")
+                        pattern = "tz\\.co\\.otapp\\.buscore\\..*\\.internal\\.(?!config\\.).*")
         })
 @Slf4j
 public class BusCoreApplication {
