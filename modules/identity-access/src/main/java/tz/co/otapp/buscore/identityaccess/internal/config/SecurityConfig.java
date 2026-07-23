@@ -27,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import tz.co.otapp.buscore.apicontracts.error.ErrorCode;
 import tz.co.otapp.buscore.apicontracts.response.ApiResponse;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
+import tz.co.otapp.buscore.identityaccess.internal.security.AudienceFilter;
 import tz.co.otapp.buscore.identityaccess.internal.security.JwtAuthenticationFilter;
 
 /**
@@ -115,7 +116,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter,
-            ObjectMapper objectMapper) throws Exception {
+            AudienceFilter audienceFilter, ObjectMapper objectMapper) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -126,6 +127,10 @@ public class SecurityConfig {
                 // mechanism to sit. The chain has no form login, but the position is the conventional one
                 // and keeps this filter ahead of everything that assumes a populated context.
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                // AFTER the JWT filter, because it needs a populated principal to have an opinion, and
+                // BEFORE authorisation, so a caller on the wrong surface is told that rather than being
+                // told they lack a permission no grant could ever give them.
+                .addFilterAfter(audienceFilter, JwtAuthenticationFilter.class)
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, exception) ->
                                 writeEnvelope(response, objectMapper, IdentityErrors.NOT_AUTHENTICATED))

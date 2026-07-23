@@ -77,6 +77,19 @@ public enum IdentityErrors implements ErrorCode {
      */
     NOT_AUTHENTICATED(401, "Authentication is required."),
 
+    /**
+     * The caller is authenticated, but is the wrong <em>kind</em> of caller for this surface.
+     *
+     * <p>Distinct from a missing permission, and the distinction matters to whoever receives it: a missing
+     * permission is fixed by a grant, while this one cannot be fixed at all — an agent will never be
+     * allowed onto the staff surface, whatever it holds. One code for both would leave a caller and a
+     * support desk unable to tell a one-line grant from an unfixable situation.
+     *
+     * <p>Safe to be distinguishable: reaching it requires having already authenticated, so it discloses
+     * only which surface the caller's own credential belongs to.
+     */
+    AUDIENCE_MISMATCH(403, "This surface is not for your kind of account."),
+
     // ───────────────────────── administration ─────────────────────────
     //
     // These are freely distinguishable, unlike the sign-in refusals above. The caller has already proved
