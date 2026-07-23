@@ -6,6 +6,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 
 /**
@@ -19,6 +20,7 @@ import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
  * grants in their own module, never by roles — a column here for them would make it possible to grant an
  * agent a permission, which is the confusion the whole staff/agent split exists to prevent.
  */
+@Getter
 @Entity
 @Table(name = "staff_roles")
 public class StaffRole extends BaseEntity {
@@ -41,13 +43,5 @@ public class StaffRole extends BaseEntity {
 
     public static StaffRole of(StaffIdentity staffIdentity, Role role) {
         return new StaffRole(staffIdentity, role);
-    }
-
-    public StaffIdentity getStaffIdentity() {
-        return staffIdentity;
-    }
-
-    public Role getRole() {
-        return role;
     }
 }

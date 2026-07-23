@@ -9,6 +9,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.identityaccess.PrincipalType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AuthEventType;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
@@ -33,6 +34,7 @@ import tz.co.otapp.buscore.shared.logging.LogSanitizer;
  * <p>The identifier and user agent are caller-controlled, so both are sanitised before storage. They are
  * later rendered into logs and admin screens, and a value containing a newline can forge a log entry.
  */
+@Getter
 @Entity
 @Table(name = "auth_audit_events")
 public class AuthAuditEvent extends BaseEntity {
@@ -89,30 +91,6 @@ public class AuthAuditEvent extends BaseEntity {
     public static AuthAuditEvent forUnknownAccount(AuthEventType eventType, String identifierUsed, String sourceIp,
             String userAgent) {
         return new AuthAuditEvent(eventType, null, null, identifierUsed, sourceIp, userAgent);
-    }
-
-    public AuthEventType getEventType() {
-        return eventType;
-    }
-
-    public PrincipalType getPrincipalType() {
-        return principalType;
-    }
-
-    public UUID getPrincipalUid() {
-        return principalUid;
-    }
-
-    public String getIdentifierUsed() {
-        return identifierUsed;
-    }
-
-    public String getSourceIp() {
-        return sourceIp;
-    }
-
-    public String getUserAgent() {
-        return userAgent;
     }
 
     /**

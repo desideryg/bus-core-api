@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tz.co.otapp.buscore.apicontracts.error.ApiException;
 import tz.co.otapp.buscore.identityaccess.Principal;
@@ -47,6 +48,7 @@ import tz.co.otapp.buscore.shared.time.Times;
  * the feature is simply absent. {@code noRollbackFor} is what prevents it, and it is the least obvious
  * line in this file.
  */
+@RequiredArgsConstructor
 @Service
 @Transactional(noRollbackFor = ApiException.class)
 @Slf4j
@@ -60,20 +62,6 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PrincipalContext principalContext;
-
-    public StaffAuthenticationServiceImpl(StaffIdentityRepository identities, StaffCredentialRepository credentials,
-            StaffRoleRepository staffRoles, StaffOperatorRepository staffOperators,
-            AuthAuditRecorder auditRecorder, PasswordEncoder passwordEncoder,
-            JwtService jwtService, PrincipalContext principalContext) {
-        this.identities = identities;
-        this.credentials = credentials;
-        this.staffRoles = staffRoles;
-        this.staffOperators = staffOperators;
-        this.auditRecorder = auditRecorder;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.principalContext = principalContext;
-    }
 
     @Override
     public LoginResponse login(LoginRequest request) {

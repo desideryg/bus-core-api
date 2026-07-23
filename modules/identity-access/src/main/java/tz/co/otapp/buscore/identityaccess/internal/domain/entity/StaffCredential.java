@@ -9,6 +9,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 import tz.co.otapp.buscore.shared.time.Times;
 
@@ -25,6 +26,7 @@ import tz.co.otapp.buscore.shared.time.Times;
  * evaluates the presented password stops nothing — the attacker's last guess is the one that matters, and
  * a lock that lets a correct password through is not a lock.
  */
+@Getter
 @Entity
 @Table(name = "staff_credentials")
 public class StaffCredential extends BaseEntity {
@@ -128,25 +130,5 @@ public class StaffCredential extends BaseEntity {
         this.passwordHash = newPasswordHash;
         this.passwordUpdatedAt = now;
         this.mustChangePassword = false;
-    }
-
-    public StaffIdentity getStaffIdentity() {
-        return staffIdentity;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public boolean isMustChangePassword() {
-        return mustChangePassword;
-    }
-
-    public int getFailedAttempts() {
-        return failedAttempts;
-    }
-
-    public Instant getLockedUntil() {
-        return lockedUntil;
     }
 }

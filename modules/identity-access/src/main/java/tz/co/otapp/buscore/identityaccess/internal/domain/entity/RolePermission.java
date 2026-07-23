@@ -6,6 +6,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 
 /**
@@ -20,6 +21,7 @@ import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
  * — the same grant twice inserts one row or fails, never two — and therefore what lets a revoke actually
  * revoke rather than remove half a grant.
  */
+@Getter
 @Entity
 @Table(name = "role_permissions")
 public class RolePermission extends BaseEntity {
@@ -42,13 +44,5 @@ public class RolePermission extends BaseEntity {
 
     public static RolePermission of(Role role, Permission permission) {
         return new RolePermission(role, permission);
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public Permission getPermission() {
-        return permission;
     }
 }

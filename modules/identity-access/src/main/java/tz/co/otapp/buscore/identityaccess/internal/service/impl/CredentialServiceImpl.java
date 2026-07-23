@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tz.co.otapp.buscore.apicontracts.error.ApiException;
 import tz.co.otapp.buscore.identityaccess.Principal;
@@ -49,6 +50,7 @@ import tz.co.otapp.buscore.shared.time.Times;
  * change-password route becomes a guessing oracle with the lockout silently bypassed — sitting directly
  * beside the endpoint the lockout protects.
  */
+@RequiredArgsConstructor
 @Service
 @Transactional(noRollbackFor = ApiException.class)
 @Slf4j
@@ -60,20 +62,16 @@ public class CredentialServiceImpl implements CredentialService {
     private final PrincipalContext principalContext;
     private final AuthAuditRecorder auditRecorder;
     private final PasswordEncoder passwordEncoder;
-    private final Duration resetTtl;
 
-    public CredentialServiceImpl(StaffIdentityRepository identities, StaffCredentialRepository credentials,
-            PasswordResetRepository resets, PrincipalContext principalContext,
-            AuthAuditRecorder auditRecorder, PasswordEncoder passwordEncoder,
-            @Value("${identity.password-reset.ttl:PT2H}") Duration resetTtl) {
-        this.identities = identities;
-        this.credentials = credentials;
-        this.resets = resets;
-        this.principalContext = principalContext;
-        this.auditRecorder = auditRecorder;
-        this.passwordEncoder = passwordEncoder;
-        this.resetTtl = resetTtl;
-    }
+    /**
+     * How long a one-time reset token stays usable.
+     *
+     * <p>Annotated on the field rather than a constructor parameter so {@code @RequiredArgsConstructor} can
+     * be used at all — {@code lombok.copyableAnnotations} carries this onto the generated parameter. The
+     * alternative is hand-writing a seven-argument constructor purely because one of them is configured.
+     */
+    @Value("${identity.password-reset.ttl:PT2H}")
+    private final Duration resetTtl;
 
     // ─────────────────────── changing a password you already have ───────────────────────
 

@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 
 /**
@@ -28,6 +29,7 @@ import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
  * The token itself exists exactly once, in the response that created it, and is never recoverable
  * afterwards; if it is lost the remedy is to issue another.
  */
+@Getter
 @Entity
 @Table(name = "staff_password_resets")
 public class PasswordReset extends BaseEntity {
@@ -86,21 +88,5 @@ public class PasswordReset extends BaseEntity {
      */
     public void consume(Instant now) {
         this.consumedAt = now;
-    }
-
-    public StaffIdentity getStaffIdentity() {
-        return staffIdentity;
-    }
-
-    public Instant getExpiresAt() {
-        return expiresAt;
-    }
-
-    public Instant getConsumedAt() {
-        return consumedAt;
-    }
-
-    public UUID getIssuedByUid() {
-        return issuedByUid;
     }
 }

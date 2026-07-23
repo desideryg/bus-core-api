@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 import tz.co.otapp.buscore.shared.time.Times;
@@ -22,6 +23,7 @@ import tz.co.otapp.buscore.shared.time.Times;
  * <p>The one place a role is read at runtime is sign-in, which flattens the holder's roles into a set of
  * permission codes. After that the role has done its job.
  */
+@Getter
 @Entity
 @Table(name = "roles")
 public class Role extends BaseEntity {
@@ -75,25 +77,5 @@ public class Role extends BaseEntity {
 
     public void restore() {
         archivedAt = null;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public StaffTenancy getHolderTenancy() {
-        return holderTenancy;
-    }
-
-    public Instant getArchivedAt() {
-        return archivedAt;
     }
 }

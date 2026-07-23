@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AccountStatus;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
@@ -26,6 +27,7 @@ import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
  * never drags a password hash into memory — and so the credential can be replaced without touching the
  * identity a hundred other rows refer to by uid.
  */
+@Getter
 @Entity
 @Table(name = "staff_identities")
 public class StaffIdentity extends BaseEntity {
@@ -161,30 +163,5 @@ public class StaffIdentity extends BaseEntity {
      */
     public void activate() {
         this.status = AccountStatus.ACTIVE;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public StaffTenancy getTenancy() {
-        return tenancy;
-    }
-
-    public AccountStatus getStatus() {
-        return status;
-    }
-
-    /** Null for anyone who is not operator staff. */
-    public UUID getCompanyUid() {
-        return companyUid;
     }
 }

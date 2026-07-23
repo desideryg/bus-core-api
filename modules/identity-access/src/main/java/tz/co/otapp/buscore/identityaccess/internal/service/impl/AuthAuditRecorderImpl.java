@@ -9,6 +9,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tz.co.otapp.buscore.identityaccess.PrincipalType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.AuthAuditEvent;
@@ -41,15 +42,12 @@ import tz.co.otapp.buscore.identityaccess.internal.service.AuthAuditRecorder;
  * from the request path the first time it causes an outage — and then there is no trail at all. The
  * request being described has already been decided; nothing here can change it.
  */
+@RequiredArgsConstructor
 @Service
 @Slf4j
 public class AuthAuditRecorderImpl implements AuthAuditRecorder {
 
     private final AuthAuditEventRepository events;
-
-    public AuthAuditRecorderImpl(AuthAuditEventRepository events) {
-        this.events = events;
-    }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)

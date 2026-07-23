@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tz.co.otapp.buscore.apicontracts.error.ApiException;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.PermissionView;
@@ -30,6 +31,7 @@ import tz.co.otapp.buscore.identityaccess.internal.service.RoleAdministrationSer
  * {@code (staff, role)} means a grant is one row or none, so "already granted" is a no-op rather than a
  * duplicate, and a revoke removes the grant rather than one of two.
  */
+@RequiredArgsConstructor
 @Service
 @Transactional
 @Slf4j
@@ -40,16 +42,6 @@ public class RoleAdministrationServiceImpl implements RoleAdministrationService 
     private final StaffIdentityRepository identities;
     private final StaffRoleRepository staffRoles;
     private final AuthAuditRecorder auditRecorder;
-
-    public RoleAdministrationServiceImpl(RoleRepository roles, PermissionRepository permissions,
-            StaffIdentityRepository identities, StaffRoleRepository staffRoles,
-            AuthAuditRecorder auditRecorder) {
-        this.roles = roles;
-        this.permissions = permissions;
-        this.identities = identities;
-        this.staffRoles = staffRoles;
-        this.auditRecorder = auditRecorder;
-    }
 
     @Override
     @Transactional(readOnly = true)

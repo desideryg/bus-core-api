@@ -9,6 +9,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 
 /**
@@ -21,6 +22,7 @@ import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
  * never joined. A constraint would weld this module to another's tables and invert the dependency arrow.
  * The cost is that nothing detects a stale handle, so it must fail closed wherever it is resolved.
  */
+@Getter
 @Entity
 @Table(name = "staff_operators")
 public class StaffOperator extends BaseEntity {
@@ -59,17 +61,5 @@ public class StaffOperator extends BaseEntity {
      */
     public static StaffOperator of(StaffIdentity staffIdentity, UUID operatorUid) {
         return new StaffOperator(staffIdentity, operatorUid, staffIdentity.getCompanyUid());
-    }
-
-    public StaffIdentity getStaffIdentity() {
-        return staffIdentity;
-    }
-
-    public UUID getOperatorUid() {
-        return operatorUid;
-    }
-
-    public UUID getCompanyUid() {
-        return companyUid;
     }
 }

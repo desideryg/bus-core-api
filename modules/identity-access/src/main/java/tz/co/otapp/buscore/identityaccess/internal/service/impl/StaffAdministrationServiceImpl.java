@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tz.co.otapp.buscore.apicontracts.error.ApiException;
 import tz.co.otapp.buscore.identityaccess.OperatorScope;
@@ -39,6 +40,7 @@ import tz.co.otapp.buscore.identityaccess.internal.service.StaffAdministrationSe
  * valid for its whole lifetime, and administering accounts on the strength of a company an administrator
  * has since been moved out of is exactly the window this avoids.
  */
+@RequiredArgsConstructor
 @Service
 @Transactional
 @Slf4j
@@ -49,16 +51,6 @@ public class StaffAdministrationServiceImpl implements StaffAdministrationServic
     private final PrincipalContext principalContext;
     private final OperatorScopeResolver scopes;
     private final AuthAuditRecorder auditRecorder;
-
-    public StaffAdministrationServiceImpl(StaffIdentityRepository identities,
-            StaffOperatorRepository memberships, PrincipalContext principalContext,
-            OperatorScopeResolver scopes, AuthAuditRecorder auditRecorder) {
-        this.identities = identities;
-        this.memberships = memberships;
-        this.principalContext = principalContext;
-        this.scopes = scopes;
-        this.auditRecorder = auditRecorder;
-    }
 
     // ─────────────────────────────── provisioning ───────────────────────────────
 
