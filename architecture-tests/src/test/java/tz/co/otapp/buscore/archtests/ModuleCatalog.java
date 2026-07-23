@@ -14,9 +14,10 @@ import java.util.Set;
  * reads bytecode, because Maven puts a module's transitive closure on its compile classpath and the
  * compiler will happily let a module import something its pom never named.
  *
- * <p>{@code shared} and {@code api-contracts} are the two universal leaves: every module may depend on
- * them and they depend on nothing. They are listed explicitly rather than special-cased, because a special
- * case is a place a future edge hides.
+ * <p>Every module may depend on {@code shared} and {@code api-contracts}. <b>Only the latter is a leaf</b>
+ * — {@code shared} depends on it, so the two are a chain rather than a pair, and their in-degrees differ
+ * (26 and 25). They are listed explicitly rather than special-cased, because a special case is a place a
+ * future edge hides.
  */
 final class ModuleCatalog {
 

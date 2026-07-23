@@ -14,7 +14,6 @@
  *   <li>{@code error} — the exception modules throw, and the catalog of codes it may carry</li>
  *   <li>{@code response} — the envelope every endpoint returns: success, error, paged</li>
  *   <li>{@code enums} — wire enums needed by more than one module</li>
- *   <li>{@code security} — the {@code DOMAIN.ACTION} permission constants</li>
  *   <li>{@code paging} — the page request and page metadata shapes</li>
  * </ul>
  *
