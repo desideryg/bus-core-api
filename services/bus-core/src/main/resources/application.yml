@@ -95,6 +95,11 @@ identity:
       # fallback would be discovered once and then work everywhere it was never changed; a system with no
       # way in is safer than a system with a shared default way in.
       password: ${IDENTITY_BOOTSTRAP_ROOT_PASSWORD:}
+      # Whether ROOT must rotate its configured password at first sign-in. FALSE by default: the deployer is
+      # expected to supply a strong password above, so the account is usable immediately. Set true where the
+      # configured value might be exposed — a shared secret, a CI variable, a shell history — so that first
+      # password is single-use and cannot become a permanent credential.
+      must-change-password: ${IDENTITY_BOOTSTRAP_ROOT_MUST_CHANGE_PASSWORD:false}
 
 # Actuator/Micrometer. The exposed surface is deliberately small: health (the probe target for a container
 # HEALTHCHECK or an orchestrator) and info. show-details: when_authorized means an anonymous probe sees

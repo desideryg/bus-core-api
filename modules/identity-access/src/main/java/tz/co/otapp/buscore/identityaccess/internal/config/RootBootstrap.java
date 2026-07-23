@@ -38,11 +38,14 @@ import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepos
  * makes the second fail. That failure is caught and treated as success, because "another instance created
  * it first" is the expected outcome of a normal rolling start, not an error worth refusing to boot over.
  *
- * <h2>It must change its password</h2>
+ * <h2>The configured password is used as-is, unless you ask otherwise</h2>
  *
- * <p>The account is created with {@code mustChangePassword}, because the configured value has necessarily
- * been seen by whoever deployed it and may be sitting in a shell history or a CI variable. Without the
- * flag, the first password would be permanent.
+ * <p>By default the account is ready to sign in with the configured password — no forced rotation — on the
+ * expectation that the deployer supplied a strong one. That is a deliberate trade with a lever attached: the
+ * configured value has necessarily been seen by whoever set it and may sit in a shell history or a CI
+ * variable, so where it might be exposed set {@code identity.bootstrap.root.must-change-password=true} and
+ * the first password becomes single-use — correct at the first sign-in and then required to be replaced
+ * before the account works at all.
  */
 /*
  * Gated off under no-database. This runner needs repositories, and repositories need an entity manager.
@@ -62,18 +65,21 @@ public class RootBootstrap implements ApplicationRunner {
     private final String username;
     private final String email;
     private final String password;
+    private final boolean mustChangePassword;
 
     public RootBootstrap(StaffIdentityRepository identities, StaffCredentialRepository credentials,
             PasswordEncoder passwordEncoder,
             @Value("${identity.bootstrap.root.username:root}") String username,
             @Value("${identity.bootstrap.root.email:root@bus-core.local}") String email,
-            @Value("${identity.bootstrap.root.password:}") String password) {
+            @Value("${identity.bootstrap.root.password:}") String password,
+            @Value("${identity.bootstrap.root.must-change-password:false}") boolean mustChangePassword) {
         this.identities = identities;
         this.credentials = credentials;
         this.passwordEncoder = passwordEncoder;
         this.username = username;
         this.email = email;
         this.password = password;
+        this.mustChangePassword = mustChangePassword;
     }
 
     @Override
@@ -93,9 +99,11 @@ public class RootBootstrap implements ApplicationRunner {
         try {
             StaffIdentity root = identities.save(StaffIdentity.ofPlatform(
                     username, email, "Root", StaffTenancy.ROOT, AccountStatus.ACTIVE));
-            credentials.save(StaffCredential.of(root, passwordEncoder.encode(password), true));
-            log.warn("Created the break-glass ROOT account '{}'. It must change its password at first "
-                    + "sign-in, and a sign-in by it should be rare enough to alert on.", username);
+            credentials.save(StaffCredential.of(root, passwordEncoder.encode(password), mustChangePassword));
+            log.warn("Created the break-glass ROOT account '{}'. {} A sign-in by it should be rare enough to "
+                    + "alert on.", username,
+                    mustChangePassword ? "It must change its password at first sign-in."
+                            : "It can sign in with the configured password.");
         } catch (DataIntegrityViolationException anotherInstanceWonTheRace) {
             // The partial unique index refused a second ROOT. Expected during a rolling start; the other
             // instance created it, which is precisely the outcome wanted.

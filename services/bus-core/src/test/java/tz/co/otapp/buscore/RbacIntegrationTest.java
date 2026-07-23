@@ -160,13 +160,16 @@ class RbacIntegrationTest {
     @Test
     @DisplayName("ROOT bypasses the permission check entirely, holding no permissions at all")
     void root_bypasses() throws Exception {
+        // Signs in directly now — must-change-password defaults to false.
         String rootToken = mockMvc.perform(loginAs("root", "bootstrap-secret-for-tests"))
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*\"accessToken\":\"([^\"]+)\".*", "$1");
 
-        // ROOT must first rotate its password, so it cannot sign in — which is correct, and means the
-        // bypass is proven through a directly-issued token instead.
-        assertThat(rootToken).contains("PASSWORD_CHANGE_REQUIRED");
+        // ROOT holds zero grants — root_is_outside_rbac proves it — yet reaches a gated route. The bypass is
+        // a single branch in PermissionGuard, not a set of permissions, and this is what exercises it.
+        mockMvc.perform(get("/admin/v1/roles").header("Authorization", "Bearer " + rootToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
     }
 
     // ───────────────────────────── granting ─────────────────────────────
