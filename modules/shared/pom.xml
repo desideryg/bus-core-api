@@ -28,6 +28,27 @@
     <description>Cross-cutting kernel: base entity, audit, outbox/messaging, paging, time, translation. A library of independent facilities, each hiding its own implementation.</description>
 
     <dependencies>
+        <!--
+          THE ONLY INTERNAL EDGE, and the one exception to "both wave-0 modules are leaves".
+
+          shared is machinery; api-contracts is pure types with no dependency of its own, not even on a
+          framework. Machinery depending on contracts is the natural direction, and it is trivially acyclic
+          because api-contracts depends on nothing.
+
+          It exists because shared must be able to REFUSE. PageRequests rejects an unusable sort expression,
+          and the alternative — throwing a JDK exception for the web layer to translate — means blanket-
+          mapping IllegalArgumentException to 400. That is worse than it looks: IllegalArgumentException is
+          thrown by ordinary programming mistakes all over the JDK, so the mapping would quietly turn genuine
+          bugs into 400s shown to a caller instead of 500s in the log, and the structured per-field detail
+          would be flattened to a single message on the way.
+
+          One error model, one exception type, one place a failure is described.
+        -->
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>api-contracts</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
@@ -35,6 +56,33 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!--
+          THE PERSISTENCE ANNOTATIONS ONLY — deliberately NOT spring-boot-starter-data-jpa.
+
+          BaseEntity needs @MappedSuperclass, @Id and the lifecycle callbacks, and that is all it needs.
+          The starter would additionally bring Hibernate, which triggers Boot's JPA and DataSource
+          autoconfiguration on the classpath of EVERY module that depends on shared — including
+          services/bus-core, which has no database yet. The application would then fail to start with
+          "Failed to determine a suitable driver class", which is exactly what happened when a module
+          carrying the full starter was briefly added to the deployable.
+
+          So: the API jar here, and the starter in each module that actually persists something. When the
+          deployable gains its first entity it gains the starter too, as part of that slice.
+        -->
+        <dependency>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+        </dependency>
+
+        <!--
+          Pageable and Sort, for the one implementation of paging every list endpoint uses. spring-data-commons
+          is standalone: no JDBC, no ORM, nothing that triggers a datasource. Same reasoning as above.
+        -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
         </dependency>
 
         <dependency>

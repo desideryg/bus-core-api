@@ -27,9 +27,15 @@ final class ModuleCatalog {
     static final Map<String, Set<String>> DAG = new LinkedHashMap<>();
 
     static {
-        // The foundations: no module dependencies at all.
-        DAG.put("shared", Set.of());
+        // The foundation. api-contracts is the true leaf: pure types, no dependency of any kind, not even
+        // on a framework — so the same types can back a generated client SDK with no Spring on its
+        // classpath.
         DAG.put("api-contracts", Set.of());
+        // shared is machinery, and machinery depends on contracts. The edge exists because shared must be
+        // able to refuse: paging validation rejects an unusable sort, and it does so with the one error
+        // model rather than a JDK exception the web layer would have to blanket-map to 400 — which would
+        // turn ordinary programming mistakes into 400s for callers instead of 500s in the log.
+        DAG.put("shared", Set.of("api-contracts"));
 
         // Tier 1 — identity, the byte store, and the reference data everything else names. These modules
         // name nothing above themselves.
