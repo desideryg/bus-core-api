@@ -86,7 +86,35 @@ public enum AuthEventType implements DescribedEnum {
      * <p>Recorded because a run of them is the signature of somebody guessing tokens, and the refusal is
      * deliberately identical for all three causes, so this row is the only place the distinction survives.
      */
-    PASSWORD_RESET_REJECTED("Password reset rejected", "A reset token was presented and was not usable.");
+    PASSWORD_RESET_REJECTED("Password reset rejected", "A reset token was presented and was not usable."),
+
+    // ─────────────────────────────── the session lifecycle ───────────────────────────────
+
+    /** A refresh token was rotated for a new access token, extending a session without a fresh sign-in. */
+    TOKEN_REFRESHED("Session extended", "A refresh token was rotated and a new access token was issued."),
+
+    /** A holder ended their own session. Pairs with the sign-in that opened it. */
+    LOGGED_OUT("Signed out", "A session was ended by its holder."),
+
+    /**
+     * A session was ended by something other than its holder — a withdrawal, a password change, a recovery.
+     *
+     * <p>One event for all of them, with the reason on the row, for the same purpose {@link #STAFF_SUSPENDED}
+     * keeps one event for suspend and block: the question afterwards is "when did this session stop working,
+     * and what stopped it", and splitting it per cause would mean asking it several times.
+     */
+    SESSION_REVOKED("Session revoked", "A session was ended by the system rather than by its holder."),
+
+    /**
+     * A refresh token that had already been rotated away was presented again.
+     *
+     * <p>Its own event, and the reason mirrors {@link #ACCOUNT_LOCKED} standing apart from {@link
+     * #LOGIN_FAILURE}: a replayed refresh token is the signature of a stolen one, and the response — revoking
+     * the entire session it belonged to — is a security action an investigation asks about directly. Folding
+     * it into {@link #SESSION_REVOKED} would bury the one event that says a credential leaked.
+     */
+    REFRESH_TOKEN_REUSED("Refresh token reused",
+            "A spent refresh token was presented again and its session was revoked.");
 
     private final String name;
     private final String description;

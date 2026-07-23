@@ -12,6 +12,7 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.dto.ChangePasswordRequ
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginResponse;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.RedeemPasswordResetRequest;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.RefreshRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
 import tz.co.otapp.buscore.identityaccess.internal.service.CredentialService;
 import tz.co.otapp.buscore.identityaccess.internal.service.StaffAuthenticationService;
@@ -69,6 +70,33 @@ public class StaffAuthController {
     @GetMapping("/me")
     public ApiResponse<StaffView> me() {
         return ApiResponse.ok(staffAuthentication.currentStaff());
+    }
+
+    /**
+     * Exchange a refresh token for a fresh access token, rotating the refresh token in the process.
+     *
+     * <p>Public, and it must be: the access token this renews has very likely already expired — that is why
+     * the caller is here — so requiring one would make the refresh mechanism unusable exactly when it is
+     * needed. The refresh token is the whole of the authorisation, which is why it is named individually in
+     * {@code PUBLIC_PATHS} rather than covered by a wildcard.
+     */
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.ok(staffAuthentication.refresh(request), "Session extended.");
+    }
+
+    /**
+     * End a session by presenting its refresh token.
+     *
+     * <p>Public for the same reason refresh is — a holder signing out may no longer have a valid access
+     * token — and idempotent: presenting a token that names no live session still returns success, because
+     * "this session is over" is the outcome either way, and answering differently would tell a caller whether
+     * a token was real.
+     */
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@Valid @RequestBody RefreshRequest request) {
+        staffAuthentication.logout(request);
+        return ApiResponse.done("Signed out.");
     }
 
     /**

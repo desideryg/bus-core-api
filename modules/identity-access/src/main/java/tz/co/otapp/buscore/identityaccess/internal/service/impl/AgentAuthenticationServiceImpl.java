@@ -16,16 +16,19 @@ import tz.co.otapp.buscore.identityaccess.PrincipalType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.Msisdn;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.AgentLoginRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginResponse;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.RefreshRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.AgentCredential;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.AgentIdentity;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AuthEventType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
+import tz.co.otapp.buscore.identityaccess.internal.domain.enums.SessionRevocationReason;
 import tz.co.otapp.buscore.identityaccess.internal.repository.AgentCredentialRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.AgentIdentityRepository;
 import tz.co.otapp.buscore.identityaccess.internal.security.JwtService;
 import tz.co.otapp.buscore.identityaccess.internal.security.PinEncoder;
 import tz.co.otapp.buscore.identityaccess.internal.service.AgentAuthenticationService;
 import tz.co.otapp.buscore.identityaccess.internal.service.AuthAuditRecorder;
+import tz.co.otapp.buscore.identityaccess.internal.service.AuthSessionService;
 import tz.co.otapp.buscore.shared.logging.LogSanitizer;
 import tz.co.otapp.buscore.shared.time.Times;
 
@@ -64,6 +67,7 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
     private final AuthAuditRecorder auditRecorder;
     private final PinEncoder pinEncoder;
     private final JwtService jwtService;
+    private final AuthSessionService authSessions;
 
     @Override
     public LoginResponse login(AgentLoginRequest request) {
@@ -148,17 +152,59 @@ public class AgentAuthenticationServiceImpl implements AgentAuthenticationServic
             throw new ApiException(IdentityErrors.PIN_CHANGE_REQUIRED);
         }
 
-        // NO TENANCY, NO OPERATORS, NO PERMISSIONS — and none of the three is a gap to be filled later.
-        // An agent belongs to no staff tenancy; the operators they sell for are selling grants in another
-        // module; and their authority is those grants, never this module's permission catalog. The empty
-        // sets here are the honest answer, which is why OperatorScopeResolver refuses a non-staff principal
-        // outright rather than reading them.
-        JwtService.IssuedToken token = jwtService.issue(new Principal(
-                identity.getUid(), PrincipalType.AGENT, null, List.of(), Set.of()));
+        JwtService.IssuedToken token = jwtService.issue(agentPrincipal(identity));
+        // Opened only here, past every refusal above — a locked, wrong-PIN or change-required sign-in must
+        // not leave a live session behind the token it was denied.
+        AuthSessionService.IssuedRefresh session = authSessions.open(identity.getUid(), PrincipalType.AGENT);
 
         audit(AuthEventType.LOGIN_SUCCESS, identity);
         log.info("agent sign-in succeeded for {}", identity.getUid());
-        return new LoginResponse(token.token(), token.expiresAt(), identity.getDisplayName());
+        return new LoginResponse(token.token(), token.expiresAt(), identity.getDisplayName(),
+                session.refreshToken(), session.expiresAt());
+    }
+
+    @Override
+    public LoginResponse refresh(RefreshRequest request) {
+        // Rotate first — proves the token names a live session, spends it, and revokes the session on a
+        // replayed spent token, all before the login is touched.
+        AuthSessionService.RotatedRefresh rotated =
+                authSessions.rotate(request.refreshToken(), PrincipalType.AGENT);
+
+        AgentIdentity identity = identities.findByUid(rotated.principalUid())
+                .filter(AgentIdentity::canAuthenticate)
+                .orElseThrow(() -> {
+                    // The login was withdrawn under a session still refreshing. Its successor token was just
+                    // minted, so end every session it holds rather than only refusing this one. The
+                    // revocation survives the throw — see the class note on noRollbackFor.
+                    authSessions.revokeAllFor(rotated.principalUid(), PrincipalType.AGENT,
+                            SessionRevocationReason.ACCOUNT_WITHDRAWN);
+                    log.info("agent refresh refused: {} can no longer authenticate", rotated.principalUid());
+                    return new ApiException(IdentityErrors.REFRESH_TOKEN_INVALID);
+                });
+
+        JwtService.IssuedToken token = jwtService.issue(agentPrincipal(identity));
+        audit(AuthEventType.TOKEN_REFRESHED, identity);
+        log.info("agent refreshed session for {}", identity.getUid());
+        return new LoginResponse(token.token(), token.expiresAt(), identity.getDisplayName(),
+                rotated.refreshToken(), rotated.expiresAt());
+    }
+
+    @Override
+    public void logout(RefreshRequest request) {
+        authSessions.logout(request.refreshToken(), PrincipalType.AGENT);
+    }
+
+    /**
+     * The principal an agent token carries: identity, and deliberately nothing else.
+     *
+     * <p>NO TENANCY, NO OPERATORS, NO PERMISSIONS — and none of the three is a gap to be filled later. An
+     * agent belongs to no staff tenancy; the operators they sell for are selling grants in another module;
+     * and their authority is those grants, never this module's permission catalog. The empty sets here are
+     * the honest answer, enforced by {@link Principal}'s own constructor, and it is why re-resolving on
+     * refresh reads nothing — there is nothing to read.
+     */
+    private static Principal agentPrincipal(AgentIdentity identity) {
+        return new Principal(identity.getUid(), PrincipalType.AGENT, null, List.of(), Set.of());
     }
 
     /**

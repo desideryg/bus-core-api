@@ -25,7 +25,8 @@ class DomainEnumsTest {
     static Stream<DescribedEnum> allConstants() {
         return Stream.of(
                 Stream.of(StaffTenancy.values()),
-                Stream.of(AccountStatus.values()))
+                Stream.of(AccountStatus.values()),
+                Stream.of(SessionRevocationReason.values()))
                 .flatMap(s -> s.map(DescribedEnum.class::cast));
     }
 

@@ -98,10 +98,21 @@ public class SecurityConfig {
             // There is no credential to authenticate with by definition; the 256-bit token is the proof.
             "/admin/v1/auth/password/redeem",
 
+            // Renewing and ending a session both present a REFRESH token, not an access token — and the
+            // access token the caller holds has most likely already expired, which is why they are here.
+            // Requiring one would make refresh unusable exactly when it is needed, and would make logout
+            // impossible for a holder whose access token has lapsed. The refresh token is the whole
+            // authorisation on both, and the session it names records which surface it belongs to, so a
+            // staff token cannot act on the agent door or the reverse.
+            "/admin/v1/auth/refresh",
+            "/admin/v1/auth/logout",
+
             // The agent door. Under an audience-scoped prefix, which is fine: AudienceFilter has no opinion
             // on an unauthenticated request, so the gate cannot refuse the very request that would produce
             // the token it checks for.
             "/agent/v1/auth/login",
+            "/agent/v1/auth/refresh",
+            "/agent/v1/auth/logout",
 
             // The walking skeleton and the orchestrator probe. Health is public because a probe cannot
             // hold a credential; the detail it exposes is already restricted by the actuator config.

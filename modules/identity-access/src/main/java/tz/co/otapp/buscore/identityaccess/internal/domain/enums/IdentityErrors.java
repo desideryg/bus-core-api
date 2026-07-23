@@ -175,7 +175,24 @@ public enum IdentityErrors implements ErrorCode {
      * is the kind of small wrongness that generates support calls. The trail records both under one event
      * type, because internally it is the same question.
      */
-    PIN_CHANGE_REQUIRED(409, "Your PIN must be changed before you can continue.");
+    PIN_CHANGE_REQUIRED(409, "Your PIN must be changed before you can continue."),
+
+    // ─────────────────────────────── the session lifecycle ───────────────────────────────
+
+    /**
+     * The refresh token is unknown, expired, revoked, or already rotated away.
+     *
+     * <p><b>One code for every cause, and it is the {@link #RESET_TOKEN_INVALID} decision again</b>: a
+     * refresh is an unauthenticated request whose whole proof is the token, so the refuser must not become an
+     * oracle. "Expired" would tell a holder of a stolen token it was once real; "revoked" would confirm the
+     * account it belonged to exists. The trail keeps the distinction — including the reuse that revoked the
+     * session — and the caller gets one answer: the session is over, sign in again.
+     *
+     * <p>401 rather than 400: the remedy is to re-authenticate, which is what a 401 means. It is deliberately
+     * <em>not</em> {@link #NOT_AUTHENTICATED}, whose remedy might be "re-attach the header" — here the header
+     * was attached and the credential behind it is spent.
+     */
+    REFRESH_TOKEN_INVALID(401, "Your session has ended. Sign in again.");
 
     private final int status;
     private final String defaultMessage;

@@ -2,6 +2,7 @@ package tz.co.otapp.buscore.identityaccess.internal.service;
 
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginResponse;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.RefreshRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
 
 /**
@@ -25,6 +26,28 @@ public interface StaffAuthenticationService {
      *         and in that case <b>no token is issued</b>.
      */
     LoginResponse login(LoginRequest request);
+
+    /**
+     * Renew a session: rotate its refresh token and mint a fresh access token.
+     *
+     * <p><b>Authority is re-resolved here, not carried across.</b> The new access token reflects the
+     * account's roles and memberships as they are now, so a grant changed since sign-in takes effect within
+     * a refresh cycle rather than only at the next full sign-in — and an account that can no longer
+     * authenticate has every session revoked rather than renewed.
+     *
+     * @throws tz.co.otapp.buscore.apicontracts.error.ApiException {@code AUTH.REFRESH_TOKEN_INVALID} for a
+     *         token that is unknown, for another surface, revoked, expired, or a replay of a spent one — and
+     *         for an account that has since been suspended or removed, whose sessions are revoked in passing
+     */
+    LoginResponse refresh(RefreshRequest request);
+
+    /**
+     * End the session a refresh token names.
+     *
+     * <p>Idempotent: a token that names no live session is the state logout wants, so it is not an error.
+     * Only this one session ends — the holder's other sign-ins are untouched.
+     */
+    void logout(RefreshRequest request);
 
     /**
      * The account behind the current token.
