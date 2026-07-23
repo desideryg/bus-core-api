@@ -6,6 +6,7 @@ import java.util.UUID;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.CreateStaffRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.SuspendStaffRequest;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.UpdateStaffRequest;
 
 /**
  * Provisioning and administering staff login identities.
@@ -45,6 +46,19 @@ public interface StaffAdministrationService {
      *         an operator account is requested without a company
      */
     StaffView create(CreateStaffRequest request);
+
+    /**
+     * Edit an account's display name.
+     *
+     * <p>Scoped exactly as every other administrative act here: an operator administrator may edit only
+     * accounts inside their own company, and reaching for one outside it is a 404 rather than a 403, for the
+     * same non-disclosure reason {@link #get} is. Only the display name moves — the username and email are
+     * fixed after provisioning; see {@link UpdateStaffRequest}.
+     *
+     * @throws tz.co.otapp.buscore.apicontracts.error.ApiException {@code 404} when no such account is inside
+     *         the caller's company
+     */
+    StaffView update(UUID staffUid, UpdateStaffRequest request);
 
     /** The accounts the caller administers — every account for platform staff, their company's otherwise. */
     List<StaffView> list();

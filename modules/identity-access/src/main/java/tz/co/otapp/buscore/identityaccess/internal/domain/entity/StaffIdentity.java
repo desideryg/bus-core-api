@@ -153,6 +153,18 @@ public class StaffIdentity extends BaseEntity {
     }
 
     /**
+     * Correct how the person is shown.
+     *
+     * <p>The only mutable descriptive field. There is deliberately no method here to change the {@link
+     * #username} or {@link #email}: the first is a sign-in handle and the second a recovery address, and a
+     * generated setter beside this one would offer a way to change either that reads as equivalent and is
+     * not — which is exactly why {@code @Setter} is banned module-wide.
+     */
+    public void changeDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    /**
      * Complete provisioning: the account has a password now.
      *
      * <p>Separate from {@link #restore()} even though both end at {@code ACTIVE}, because the callers must

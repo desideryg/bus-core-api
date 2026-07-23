@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,6 +20,7 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.dto.CreateStaffRequest
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.PasswordResetIssued;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.SuspendStaffRequest;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.UpdateStaffRequest;
 import tz.co.otapp.buscore.identityaccess.internal.service.CredentialService;
 import tz.co.otapp.buscore.identityaccess.internal.service.StaffAdministrationService;
 
@@ -78,6 +80,20 @@ public class StaffAdminController {
     @PreAuthorize("@perm.has('" + Permissions.STAFF_READ + "')")
     public ApiResponse<StaffView> get(@PathVariable UUID uid) {
         return ApiResponse.ok(staffAdministration.get(uid));
+    }
+
+    /**
+     * Edit an account's display name.
+     *
+     * <p>{@code PATCH}, because it changes some of the resource and not all of it — a {@code PUT} would
+     * invite a client to send the whole account and expect the omitted fields cleared, and most of them
+     * cannot be set here at all. Its own permission: correcting a detail is a smaller power than creating an
+     * account or withdrawing one, and should be grantable on its own.
+     */
+    @PatchMapping("/uid/{uid}")
+    @PreAuthorize("@perm.has('" + Permissions.STAFF_UPDATE + "')")
+    public ApiResponse<StaffView> update(@PathVariable UUID uid, @Valid @RequestBody UpdateStaffRequest request) {
+        return ApiResponse.ok(staffAdministration.update(uid, request), "Staff account updated.");
     }
 
     /**

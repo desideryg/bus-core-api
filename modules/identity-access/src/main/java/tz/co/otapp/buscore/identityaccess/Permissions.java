@@ -82,6 +82,16 @@ public final class Permissions {
      */
     public static final String STAFF_CREATE = "STAFF.CREATE";
 
+    /**
+     * Edit an account's display name.
+     *
+     * <p>Deliberately narrow: the power to correct how a person is shown, and nothing more. The username is
+     * a sign-in handle and the email a recovery address — changing either has consequences a rename does not,
+     * so neither is editable through this surface; tenancy and status are their own powers. Separate from
+     * {@link #STAFF_CREATE} because amending an existing account and minting a new one are different acts.
+     */
+    public static final String STAFF_UPDATE = "STAFF.UPDATE";
+
     /** Withdraw a staff member's access, whether for now ({@code SUSPENDED}) or for good ({@code BLOCKED}). */
     public static final String STAFF_SUSPEND = "STAFF.SUSPEND";
 
@@ -124,6 +134,7 @@ public final class Permissions {
             PERMISSION_READ,
             STAFF_READ,
             STAFF_CREATE,
+            STAFF_UPDATE,
             STAFF_SUSPEND,
             STAFF_RESTORE,
             STAFF_OPERATOR_LINK,

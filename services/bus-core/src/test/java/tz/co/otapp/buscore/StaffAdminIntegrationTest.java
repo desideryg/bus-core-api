@@ -21,6 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -357,6 +358,70 @@ class StaffAdminIntegrationTest {
                 .andExpect(jsonPath("$.data[0]").value(operator.toString()));
     }
 
+    // ─────────────────────────────── editing ───────────────────────────────
+
+    @Test
+    @DisplayName("a display name can be corrected, and the change is persisted and returned")
+    void a_display_name_can_be_edited() throws Exception {
+        String token = platformAdmin("admin");
+        givenStaff("nova", "ADMIN", null);
+
+        mockMvc.perform(updateRequest(staffUid("nova"), token, "Nova Prime"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.displayName").value("Nova Prime"))
+                // The sign-in handle is untouched: it is not on the request at all, so an edit cannot move it.
+                .andExpect(jsonPath("$.data.username").value("nova"));
+
+        assertThat(displayNameOf("nova")).isEqualTo("Nova Prime");
+        assertThat(emailOf("nova")).isEqualTo("nova@bus-core.local");
+        assertThat(eventTypes()).contains("STAFF_UPDATED");
+    }
+
+    @Test
+    @DisplayName("editing is its own power — reading an account does not confer amending it")
+    void editing_needs_its_own_permission() throws Exception {
+        givenStaff("supporter", "ADMIN", null);
+        givenRole("supporter", "SUPPORT");
+        String supportToken = tokenFor("supporter");
+        givenStaff("nova", "ADMIN", null);
+
+        // SUPPORT holds STAFF.READ and not STAFF.UPDATE. Being able to see a colleague's account and being
+        // able to rewrite it are different powers, and the gate keeps them apart.
+        mockMvc.perform(updateRequest(staffUid("nova"), supportToken, "Tampered"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("COMMON.FORBIDDEN"));
+
+        assertThat(displayNameOf("nova")).isEqualTo("nova");
+    }
+
+    @Test
+    @DisplayName("another company's account cannot be edited, and the refusal does not confirm it exists")
+    void cross_company_edits_are_refused() throws Exception {
+        givenStaff("theirs", "OPERATOR", COMPANY_B);
+        String token = operatorAdmin("dora", COMPANY_A);
+
+        // Dora holds STAFF.UPDATE through OPERATOR_ADMIN, so only the company boundary stands here — and it
+        // answers 404, not 403, for the same reason a cross-company read does.
+        mockMvc.perform(updateRequest(staffUid("theirs"), token, "Reached"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("AUTH.STAFF_NOT_FOUND"));
+
+        assertThat(displayNameOf("theirs")).isEqualTo("theirs");
+    }
+
+    @Test
+    @DisplayName("a blank display name is refused before anything is written")
+    void a_blank_display_name_is_refused() throws Exception {
+        String token = platformAdmin("admin");
+        givenStaff("nova", "ADMIN", null);
+
+        mockMvc.perform(updateRequest(staffUid("nova"), token, ""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON.VALIDATION_FAILED"));
+
+        assertThat(displayNameOf("nova")).isEqualTo("nova");
+    }
+
     // ───────────────────────────────── the trail ─────────────────────────────────
 
     @Test
@@ -414,6 +479,12 @@ class StaffAdminIntegrationTest {
         return post("/admin/v1/staff/uid/" + staffUid + "/suspension")
                 .header("Authorization", "Bearer " + token)
                 .contentType("application/json").content("{\"status\":\"" + status + "\"}");
+    }
+
+    private RequestBuilder updateRequest(UUID staffUid, String token, String displayName) {
+        return patch("/admin/v1/staff/uid/" + staffUid)
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json").content("{\"displayName\":\"" + displayName + "\"}");
     }
 
     private RequestBuilder linkRequest(UUID staffUid, UUID operatorUid, String token) {
@@ -488,6 +559,16 @@ class StaffAdminIntegrationTest {
     private String statusOf(String username) {
         return jdbc.queryForObject(
                 "SELECT status FROM staff_identities WHERE username = ?", String.class, username);
+    }
+
+    private String displayNameOf(String username) {
+        return jdbc.queryForObject(
+                "SELECT display_name FROM staff_identities WHERE username = ?", String.class, username);
+    }
+
+    private String emailOf(String username) {
+        return jdbc.queryForObject(
+                "SELECT email FROM staff_identities WHERE username = ?", String.class, username);
     }
 
     private Integer credentialCount(String username) {
