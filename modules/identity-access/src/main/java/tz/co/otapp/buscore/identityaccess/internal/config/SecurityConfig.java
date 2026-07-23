@@ -84,6 +84,20 @@ public class SecurityConfig {
      */
     private static final String[] PUBLIC_PATHS = {
             "/admin/v1/auth/login",
+
+            // Changing a password cannot require a token, because the account most likely to need it has
+            // just been refused one: a forced rotation returns 409 and no token, deliberately, so that a
+            // rotation-pending account is not quietly fully usable. Requiring a token here would leave the
+            // holder with a password they must change and no way to change it.
+            //
+            // Not unauthenticated in substance — the current password is the authorisation, and the route
+            // counts failures and honours the lockout exactly as sign-in does.
+            "/admin/v1/auth/password",
+
+            // Redeeming a reset token is how an account that has never had a password gets its first one.
+            // There is no credential to authenticate with by definition; the 256-bit token is the proof.
+            "/admin/v1/auth/password/redeem",
+
             // The walking skeleton and the orchestrator probe. Health is public because a probe cannot
             // hold a credential; the detail it exposes is already restricted by the actuator config.
             "/ping",

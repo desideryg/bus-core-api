@@ -113,6 +113,23 @@ public class StaffCredential extends BaseEntity {
         lockedUntil = null;
     }
 
+    /**
+     * Replace the password.
+     *
+     * <p><b>Clears {@link #mustChangePassword} as part of the same operation</b>, because that flag means
+     * "this password must be replaced" and it has just been replaced. Leaving it to the caller would make
+     * the forced-rotation loop depend on every call site remembering to close it — and the one that forgot
+     * would refuse the holder a token forever, with the password they were told to set.
+     *
+     * <p>Takes the instant rather than reading the clock, so the caller decides the moment and one request
+     * stamps every row it touches with the same one.
+     */
+    public void changePassword(String newPasswordHash, Instant now) {
+        this.passwordHash = newPasswordHash;
+        this.passwordUpdatedAt = now;
+        this.mustChangePassword = false;
+    }
+
     public StaffIdentity getStaffIdentity() {
         return staffIdentity;
     }

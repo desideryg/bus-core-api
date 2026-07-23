@@ -16,8 +16,10 @@ import jakarta.validation.Valid;
 import tz.co.otapp.buscore.apicontracts.response.ApiResponse;
 import tz.co.otapp.buscore.identityaccess.Permissions;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.CreateStaffRequest;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.PasswordResetIssued;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.SuspendStaffRequest;
+import tz.co.otapp.buscore.identityaccess.internal.service.CredentialService;
 import tz.co.otapp.buscore.identityaccess.internal.service.StaffAdministrationService;
 
 /**
@@ -45,9 +47,12 @@ import tz.co.otapp.buscore.identityaccess.internal.service.StaffAdministrationSe
 public class StaffAdminController {
 
     private final StaffAdministrationService staffAdministration;
+    private final CredentialService credentials;
 
-    public StaffAdminController(StaffAdministrationService staffAdministration) {
+    public StaffAdminController(StaffAdministrationService staffAdministration,
+            CredentialService credentials) {
         this.staffAdministration = staffAdministration;
+        this.credentials = credentials;
     }
 
     /**
@@ -123,5 +128,25 @@ public class StaffAdminController {
     public ApiResponse<Void> unlink(@PathVariable UUID uid, @PathVariable UUID operatorUid) {
         staffAdministration.unlinkOperator(uid, operatorUid);
         return ApiResponse.done("Operator unlinked.");
+    }
+
+    /**
+     * Issue a one-time token for setting this account's password.
+     *
+     * <p>How a provisioned account gets its first credential, and how a forgotten password is recovered —
+     * one mechanism rather than two that drift.
+     *
+     * <p><b>An administrator never sets a password.</b> They cause a token to exist and pass it to the
+     * holder, who sets their own. That is what keeps "who provisioned this account" and "who knows its
+     * password" different people, and it is why the response is the only place the token ever appears.
+     *
+     * <p>Its own permission, because it is effectively the power to take over any account the caller
+     * administers — a strictly larger power than creating one.
+     */
+    @PostMapping("/uid/{uid}/password-reset")
+    @PreAuthorize("@perm.has('" + Permissions.STAFF_PASSWORD_RESET + "')")
+    public ApiResponse<PasswordResetIssued> issueReset(@PathVariable UUID uid) {
+        return ApiResponse.created(credentials.issueReset(uid),
+                "Reset token issued. Give it to the holder; it cannot be shown again.");
     }
 }

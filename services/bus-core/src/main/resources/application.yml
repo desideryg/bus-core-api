@@ -71,6 +71,11 @@ identity:
     # includes an account that has since been suspended.
     access-token-ttl: ${IDENTITY_JWT_TTL:PT15M}
     issuer: bus-core
+  password-reset:
+    # How long a one-time reset token stays usable. Longer than a token TTL because a person has to receive
+    # it out of band and act on it, and shorter than a working day because it is a bearer credential: for
+    # as long as it lives, whoever holds it can take the account.
+    ttl: ${IDENTITY_PASSWORD_RESET_TTL:PT2H}
   bootstrap:
     root:
       username: ${IDENTITY_BOOTSTRAP_ROOT_USERNAME:root}

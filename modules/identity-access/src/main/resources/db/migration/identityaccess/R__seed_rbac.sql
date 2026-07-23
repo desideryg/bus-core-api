@@ -8,7 +8,7 @@
 -- THE CODES HERE MUST MATCH tz.co.otapp.buscore.identityaccess.Permissions EXACTLY, in both directions.
 -- A code named by a route but missing here refuses everyone forever, silently, and no integration test
 -- catches it — a test runs as an administrator granted every SEEDED code, or as ROOT which bypasses the
--- check. PermissionCatalogTest is what holds the two lists together.
+-- check. RbacIntegrationTest is what holds the two lists together, comparing them in both directions.
 
 -- ───────────────────────────────── permissions ─────────────────────────────────
 --
@@ -29,7 +29,9 @@ VALUES
     (gen_random_uuid(), 'STAFF.OPERATOR_LINK',
      'Attach an operator to a staff member, widening whose rows they reach.',                        now(), now()),
     (gen_random_uuid(), 'STAFF.OPERATOR_UNLINK',
-     'Detach an operator from a staff member, narrowing whose rows they reach.',                     now(), now())
+     'Detach an operator from a staff member, narrowing whose rows they reach.',                     now(), now()),
+    (gen_random_uuid(), 'STAFF.PASSWORD_RESET',
+     'Issue a one-time token for setting a staff account''s password.',                              now(), now())
 ON CONFLICT (code) DO UPDATE
     SET description = EXCLUDED.description,
         updated_at  = now();
@@ -80,7 +82,8 @@ SELECT gen_random_uuid(), r.id, p.id, now(), now()
 FROM roles r
          JOIN permissions p ON p.code IN ('ROLE.READ', 'ROLE.GRANT', 'ROLE.REVOKE', 'PERMISSION.READ',
                                           'STAFF.READ', 'STAFF.CREATE', 'STAFF.SUSPEND', 'STAFF.RESTORE',
-                                          'STAFF.OPERATOR_LINK', 'STAFF.OPERATOR_UNLINK')
+                                          'STAFF.OPERATOR_LINK', 'STAFF.OPERATOR_UNLINK',
+                                          'STAFF.PASSWORD_RESET')
 WHERE r.code = 'PLATFORM_ADMIN'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
@@ -98,6 +101,7 @@ INSERT INTO role_permissions (uid, role_id, permission_id, created_at, updated_a
 SELECT gen_random_uuid(), r.id, p.id, now(), now()
 FROM roles r
          JOIN permissions p ON p.code IN ('ROLE.READ', 'STAFF.READ', 'STAFF.CREATE', 'STAFF.SUSPEND',
-                                          'STAFF.RESTORE', 'STAFF.OPERATOR_LINK', 'STAFF.OPERATOR_UNLINK')
+                                          'STAFF.RESTORE', 'STAFF.OPERATOR_LINK', 'STAFF.OPERATOR_UNLINK',
+                                          'STAFF.PASSWORD_RESET')
 WHERE r.code = 'OPERATOR_ADMIN'
 ON CONFLICT (role_id, permission_id) DO NOTHING;

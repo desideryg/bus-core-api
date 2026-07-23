@@ -143,7 +143,29 @@ public enum IdentityErrors implements ErrorCode {
      * <p>400 rather than 403 — nothing is refused, the request is incomplete. Only platform staff can meet
      * this, since operator staff take the company from their own account and are never asked.
      */
-    COMPANY_REQUIRED(400, "Name the company this account belongs to.");
+    COMPANY_REQUIRED(400, "Name the company this account belongs to."),
+
+    // ─────────────────────────── the credential lifecycle ───────────────────────────
+
+    /**
+     * The new password is the one already in use.
+     *
+     * <p>Its own code rather than a field-validation message, because it is the only password rule that
+     * cannot be checked without the stored hash. Refusing it matters most on a forced change, where
+     * "changing" the password to itself would satisfy the requirement while defeating the reason for it.
+     */
+    PASSWORD_UNCHANGED(400, "The new password must be different from the current one."),
+
+    /**
+     * The reset token is unknown, expired, or already spent.
+     *
+     * <p><b>One code for three causes, deliberately</b>, and the opposite of the rule that administrative
+     * refusals are freely distinguishable — a redemption is an unauthenticated request from somebody who
+     * has proved nothing. "Expired" tells a guesser they found a real token and should look for a fresher
+     * one; "already used" tells them the account was recently reset and is worth attention. The trail keeps
+     * the distinction; the caller does not get it.
+     */
+    RESET_TOKEN_INVALID(400, "That reset link is not usable. Ask for a new one.");
 
     private final int status;
     private final String defaultMessage;

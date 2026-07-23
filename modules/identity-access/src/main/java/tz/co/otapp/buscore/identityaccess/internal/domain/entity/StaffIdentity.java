@@ -150,6 +150,19 @@ public class StaffIdentity extends BaseEntity {
         this.status = AccountStatus.ACTIVE;
     }
 
+    /**
+     * Complete provisioning: the account has a password now.
+     *
+     * <p>Separate from {@link #restore()} even though both end at {@code ACTIVE}, because the callers must
+     * not be interchangeable. Restoring is an administrative act with its own permission; this one happens
+     * when a holder redeems a reset token, and it must only ever move an account out of {@code PENDING} —
+     * setting a password is not permission to lift a suspension. The caller checks the status; the two
+     * method names are what keep that check from looking optional.
+     */
+    public void activate() {
+        this.status = AccountStatus.ACTIVE;
+    }
+
     public String getUsername() {
         return username;
     }

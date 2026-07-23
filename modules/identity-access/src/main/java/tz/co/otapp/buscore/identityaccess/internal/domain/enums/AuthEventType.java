@@ -63,7 +63,30 @@ public enum AuthEventType implements DescribedEnum {
     OPERATOR_LINKED("Operator linked", "A staff account was attached to an operator."),
 
     /** A staff member lost reach over an operator. */
-    OPERATOR_UNLINKED("Operator unlinked", "A staff account was detached from an operator.");
+    OPERATOR_UNLINKED("Operator unlinked", "A staff account was detached from an operator."),
+
+    /** The holder set a new password by presenting the current one. */
+    PASSWORD_CHANGED("Password changed", "An account's password was changed by its holder."),
+
+    /**
+     * An administrator created a one-time token for setting an account's password.
+     *
+     * <p>The single most sensitive administrative act in the module: it is the power to obtain a credential
+     * for somebody else's account. Recorded with the issuer, because a takeover investigation starts by
+     * asking who caused the reset to exist.
+     */
+    PASSWORD_RESET_ISSUED("Password reset issued", "A one-time password-reset token was created."),
+
+    /** A reset token was spent and a password set. Pairs with the issue event to close the loop. */
+    PASSWORD_RESET_REDEEMED("Password reset redeemed", "A password was set using a one-time token."),
+
+    /**
+     * A reset token was presented and refused — unknown, expired or already spent.
+     *
+     * <p>Recorded because a run of them is the signature of somebody guessing tokens, and the refusal is
+     * deliberately identical for all three causes, so this row is the only place the distinction survives.
+     */
+    PASSWORD_RESET_REJECTED("Password reset rejected", "A reset token was presented and was not usable.");
 
     private final String name;
     private final String description;

@@ -102,6 +102,16 @@ public final class Permissions {
     public static final String STAFF_OPERATOR_UNLINK = "STAFF.OPERATOR_UNLINK";
 
     /**
+     * Issue a one-time token that lets somebody set an account's password.
+     *
+     * <p><b>Effectively the power to take over the account</b>, and separate from {@link #STAFF_CREATE} for
+     * that reason: provisioning staff is a routine administrative act, and being able to reset a
+     * colleague's password is not. Anyone holding this can obtain a credential for any account they
+     * administer, so it belongs to fewer people than the rest of this list.
+     */
+    public static final String STAFF_PASSWORD_RESET = "STAFF.PASSWORD_RESET";
+
+    /**
      * The whole catalog, for the test that holds it against the database.
      *
      * <p>Maintained by hand alongside the constants above. That duplication is deliberate: it is what makes
@@ -117,5 +127,6 @@ public final class Permissions {
             STAFF_SUSPEND,
             STAFF_RESTORE,
             STAFF_OPERATOR_LINK,
-            STAFF_OPERATOR_UNLINK);
+            STAFF_OPERATOR_UNLINK,
+            STAFF_PASSWORD_RESET);
 }
