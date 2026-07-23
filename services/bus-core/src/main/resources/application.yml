@@ -70,6 +70,11 @@ identity:
     # Short, because a token is a snapshot: anything it asserts keeps being true until it expires, which
     # includes an account that has since been suspended.
     access-token-ttl: ${IDENTITY_JWT_TTL:PT15M}
+    # How long a session lives from the sign-in that opened it — an ABSOLUTE cap, not sliding: refreshing
+    # rotates the token but never pushes this out, so a session cannot renew itself indefinitely. Days rather
+    # than minutes because the refresh token is presented only to /refresh and is single-use, so the exposure
+    # a short access-token TTL buys down is not the exposure this governs. 30 days (720h) by default.
+    refresh-token-ttl: ${IDENTITY_JWT_REFRESH_TTL:PT720H}
     issuer: bus-core
   password-reset:
     # How long a one-time reset token stays usable. Longer than a token TTL because a person has to receive

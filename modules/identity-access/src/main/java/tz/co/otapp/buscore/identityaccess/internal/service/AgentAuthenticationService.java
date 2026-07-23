@@ -2,6 +2,7 @@ package tz.co.otapp.buscore.identityaccess.internal.service;
 
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.AgentLoginRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.LoginResponse;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.RefreshRequest;
 
 /**
  * Agent sign-in — and, in this module, nothing else about an agent.
@@ -41,4 +42,23 @@ public interface AgentAuthenticationService {
      *         and no token is issued in that case
      */
     LoginResponse login(AgentLoginRequest request);
+
+    /**
+     * Renew an agent's session: rotate its refresh token and mint a fresh access token.
+     *
+     * <p>The renewed token asserts identity and nothing more, exactly as the sign-in token does — an agent's
+     * authority is selling grants in another module, never anything this one could resolve. What refresh
+     * re-checks is only that the login still exists and can authenticate; an agent whose login was withdrawn
+     * mid-session stops renewing rather than carrying on to the session's expiry.
+     *
+     * @throws tz.co.otapp.buscore.apicontracts.error.ApiException {@code AUTH.REFRESH_TOKEN_INVALID} for a
+     *         token that is unknown, for the staff surface, revoked, expired, or a replay of a spent one —
+     *         and for a login since withdrawn, whose sessions are revoked in passing
+     */
+    LoginResponse refresh(RefreshRequest request);
+
+    /**
+     * End the session an agent's refresh token names. Idempotent, and touches only that one session.
+     */
+    void logout(RefreshRequest request);
 }

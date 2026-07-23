@@ -26,11 +26,13 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AccountStatus;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AuthEventType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
+import tz.co.otapp.buscore.identityaccess.internal.domain.enums.SessionRevocationReason;
 import tz.co.otapp.buscore.identityaccess.internal.repository.PasswordResetRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffCredentialRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepository;
 import tz.co.otapp.buscore.identityaccess.internal.security.ResetTokens;
 import tz.co.otapp.buscore.identityaccess.internal.service.AuthAuditRecorder;
+import tz.co.otapp.buscore.identityaccess.internal.service.AuthSessionService;
 import tz.co.otapp.buscore.identityaccess.internal.service.CredentialService;
 import tz.co.otapp.buscore.shared.logging.LogSanitizer;
 import tz.co.otapp.buscore.shared.time.Times;
@@ -61,6 +63,7 @@ public class CredentialServiceImpl implements CredentialService {
     private final PasswordResetRepository resets;
     private final PrincipalContext principalContext;
     private final AuthAuditRecorder auditRecorder;
+    private final AuthSessionService authSessions;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -140,6 +143,14 @@ public class CredentialServiceImpl implements CredentialService {
 
         credential.changePassword(passwordEncoder.encode(request.newPassword()), now);
         credentials.save(credential);
+
+        // A password change ends every session opened under the old one. The holder authenticated here with
+        // the password rather than a session, so they hold no session this could wrongly close; anyone who
+        // did — a device left signed in, or someone the change is meant to lock out — is put back to a fresh
+        // sign-in with the new password. That the reason for the change might be a suspected compromise is
+        // exactly why it must not leave the compromised sessions renewing.
+        authSessions.revokeAllFor(identity.getUid(), PrincipalType.STAFF,
+                SessionRevocationReason.PASSWORD_CHANGED);
 
         auditRecorder.record(AuthEventType.PASSWORD_CHANGED, PrincipalType.STAFF, identity.getUid(),
                 identifier);
@@ -234,6 +245,13 @@ public class CredentialServiceImpl implements CredentialService {
 
         reset.consume(now);
         resets.save(reset);
+
+        // A recovery ends every existing session — the reason SessionRevocationReason.CREDENTIAL_RESET exists.
+        // A forgotten-password reset is the moment an account is most likely to have been taken over, and a
+        // session left renewing is the attacker's, not the holder's. A no-op for the first-credential case
+        // just above, which by definition has no sessions to end.
+        authSessions.revokeAllFor(identity.getUid(), PrincipalType.STAFF,
+                SessionRevocationReason.CREDENTIAL_RESET);
 
         auditRecorder.record(AuthEventType.PASSWORD_RESET_REDEEMED, PrincipalType.STAFF, identity.getUid(),
                 identity.getUsername());

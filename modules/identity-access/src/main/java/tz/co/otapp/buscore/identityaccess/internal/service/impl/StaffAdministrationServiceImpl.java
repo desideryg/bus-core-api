@@ -24,9 +24,11 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffOperator;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AccountStatus;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AuthEventType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
+import tz.co.otapp.buscore.identityaccess.internal.domain.enums.SessionRevocationReason;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffOperatorRepository;
 import tz.co.otapp.buscore.identityaccess.internal.service.AuthAuditRecorder;
+import tz.co.otapp.buscore.identityaccess.internal.service.AuthSessionService;
 import tz.co.otapp.buscore.identityaccess.internal.service.StaffAdministrationService;
 
 /**
@@ -51,6 +53,7 @@ public class StaffAdministrationServiceImpl implements StaffAdministrationServic
     private final PrincipalContext principalContext;
     private final OperatorScopeResolver scopes;
     private final AuthAuditRecorder auditRecorder;
+    private final AuthSessionService authSessions;
 
     // ─────────────────────────────── provisioning ───────────────────────────────
 
@@ -173,6 +176,14 @@ public class StaffAdministrationServiceImpl implements StaffAdministrationServic
         }
 
         target.withdraw(request.status());
+
+        // WITHDRAWING ACCESS ENDS THE ACCOUNT'S SESSIONS — this is what makes the withdrawal take effect now
+        // rather than whenever each live token happened to expire. An access token already issued still works
+        // until its short TTL runs out (it is stateless and unread), but no session can be refreshed past
+        // this, so the account is out within minutes instead of up to a refresh lifetime. Without it,
+        // suspending a compromised account would leave every open session renewing itself indefinitely.
+        authSessions.revokeAllFor(target.getUid(), PrincipalType.STAFF,
+                SessionRevocationReason.ACCOUNT_WITHDRAWN);
 
         // The reason is recorded rather than stored on the account: an account has one current status but a
         // history of withdrawals, and a column would keep only the most recent explanation.
