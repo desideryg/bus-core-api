@@ -75,7 +75,28 @@ public enum IdentityErrors implements ErrorCode {
      * rejected", this one answers "you presented no usable token". Different remedies — sign in, versus
      * refresh or re-attach the header.
      */
-    NOT_AUTHENTICATED(401, "Authentication is required.");
+    NOT_AUTHENTICATED(401, "Authentication is required."),
+
+    // ───────────────────────── administration ─────────────────────────
+    //
+    // These are freely distinguishable, unlike the sign-in refusals above. The caller has already proved
+    // who they are and has been granted the permission to administer accounts, so telling them precisely
+    // what was wrong discloses nothing they could not discover through the surface they already hold.
+
+    /** No staff account with that handle. */
+    STAFF_NOT_FOUND(404, "No such staff account."),
+
+    /** No role with that code. The message names the code, because a typo is the usual cause. */
+    ROLE_NOT_FOUND(404, "No such role."),
+
+    /**
+     * The role exists but cannot be given to this account.
+     *
+     * <p>Covers two causes deliberately — the role is archived, or it is declared for a different class of
+     * staff. They share a code because the remedy is the same (choose a different role) and the message
+     * says which applied.
+     */
+    ROLE_NOT_GRANTABLE(409, "That role cannot be granted to this account.");
 
     private final int status;
     private final String defaultMessage;

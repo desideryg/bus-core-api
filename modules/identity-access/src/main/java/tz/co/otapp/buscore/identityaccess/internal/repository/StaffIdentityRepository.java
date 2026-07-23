@@ -5,8 +5,8 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
-import tz.co.otapp.buscore.identityaccess.internal.domain.enums.StaffTenancy;
 
 /**
  * Staff login identities.

@@ -6,8 +6,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AccountStatus;
-import tz.co.otapp.buscore.identityaccess.internal.domain.enums.StaffTenancy;
 import tz.co.otapp.buscore.shared.abstraction.BaseEntity;
 
 /**

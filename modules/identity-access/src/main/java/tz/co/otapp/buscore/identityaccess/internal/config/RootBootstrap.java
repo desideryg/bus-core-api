@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.slf4j.Slf4j;
+import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffCredential;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AccountStatus;
-import tz.co.otapp.buscore.identityaccess.internal.domain.enums.StaffTenancy;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffCredentialRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepository;
 

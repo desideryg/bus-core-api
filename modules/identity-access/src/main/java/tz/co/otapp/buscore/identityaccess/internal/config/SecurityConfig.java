@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -63,6 +64,15 @@ import tz.co.otapp.buscore.identityaccess.internal.security.JwtAuthenticationFil
  */
 @Configuration
 @ComponentScan(basePackages = "tz.co.otapp.buscore.identityaccess.internal.security")
+/*
+ * METHOD SECURITY IS ENABLED HERE, in the same class as the chain and gated on nothing.
+ *
+ * If it were absent, every @PreAuthorize in the reactor would be INERT — present, reviewed, and doing
+ * nothing. No test would fail, because a test that expects a 200 still gets one. The failure is entirely
+ * silent, which is why this annotation sits beside the chain rather than in a configuration of its own
+ * that could be conditionally excluded.
+ */
+@EnableMethodSecurity
 public class SecurityConfig {
 
     /**
