@@ -7,10 +7,6 @@
 # The artifact carries one name; observability wants three. spring.application.name is set per profile
 # below, so traces, metrics, and log lines tell the roles apart even though they ship in one jar.
 #
-# There is NO datasource block, and its absence is deliberate rather than unfinished: no module owns an
-# entity or a migration yet, so nothing on the classpath asks for a DataSource and the scaffold starts
-# with no Postgres, no Valkey, and no broker running. Persistence configuration arrives in the same slice
-# as the first entity.
 spring:
   profiles:
     # Running with no role would start a process that serves nothing and sweeps nothing.
@@ -18,6 +14,71 @@ spring:
     group:
       # `dev` is dev-run convenience: it activates the api role and layers application-dev.yml on top.
       dev: api
+
+  datasource:
+    # PORT 15432, NOT 5432, AND THAT IS DELIBERATE. On a developer machine running several projects,
+    # 5432 is whatever container claimed it first — pointing at it would run our migrations against
+    # somebody else's database. An explicit port is the difference between a wrong default and no default.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:15432/bus_core}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin.123}
+
+  jpa:
+    hibernate:
+      # validate, never create or update. The schema belongs to migrations; Hibernate's job is to complain
+      # when the entities and the schema have drifted apart, which is exactly what it is good at.
+      ddl-auto: validate
+    # Do not hold a database connection open for the whole request just in case a view touches a lazy
+    # association. A view should not be touching one.
+    open-in-view: false
+    properties:
+      hibernate:
+        type:
+          # THE ONE PROPERTY THAT HOLDS THE WHOLE SCHEMA UP. Hibernate maps java.time.Instant to
+          # TIMESTAMP_UTC, which is `timestamptz`, while every migration declares plain `timestamp`.
+          # Without this, ddl-auto=validate fails on EVERY table in the system — starting with created_at
+          # and updated_at, which BaseEntity puts on all of them.
+          preferred_instant_jdbc_type: TIMESTAMP
+        jdbc:
+          # Read and write every timestamp as UTC regardless of the server's zone, so an Instant survives
+          # the round trip unchanged and the JVM's default zone never enters it.
+          time_zone: UTC
+
+  autoconfigure:
+    exclude:
+      # No in-memory user, ever. With spring-security on the classpath and no UserDetailsService bean,
+      # Boot creates one and logs "Using generated security password" at startup — a real account, in
+      # every environment, whose password is in the log. We authenticate by token; there is no form or
+      # basic-auth path for it to serve, so it is pure attack surface.
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+  flyway:
+    # Disabled so Boot's single default instance does not fight the per-module runner. See
+    # FlywayMigrationsConfig — the whole point is one history table per module, which one global instance
+    # cannot express.
+    enabled: false
+
+# Identity and access. Every value is environment-overridable; the defaults exist so a developer can start
+# the application without a shell full of exports.
+identity:
+  jwt:
+    # NO USABLE DEFAULT, ON PURPOSE. A blank secret fails the application at STARTUP rather than at first
+    # sign-in, because a deployment mistake should surface while whoever deployed it is still watching.
+    # The value below is long enough to satisfy HS256 for local work and is not a secret — override it
+    # everywhere else.
+    secret: ${IDENTITY_JWT_SECRET:local-development-only-secret-change-me-please-32b+}
+    # Short, because a token is a snapshot: anything it asserts keeps being true until it expires, which
+    # includes an account that has since been suspended.
+    access-token-ttl: ${IDENTITY_JWT_TTL:PT15M}
+    issuer: bus-core
+  bootstrap:
+    root:
+      username: ${IDENTITY_BOOTSTRAP_ROOT_USERNAME:root}
+      email: ${IDENTITY_BOOTSTRAP_ROOT_EMAIL:root@bus-core.local}
+      # BLANK BY DEFAULT, so no account is created unless somebody chooses a password. A well-known
+      # fallback would be discovered once and then work everywhere it was never changed; a system with no
+      # way in is safer than a system with a shared default way in.
+      password: ${IDENTITY_BOOTSTRAP_ROOT_PASSWORD:}
 
 # Actuator/Micrometer. The exposed surface is deliberately small: health (the probe target for a container
 # HEALTHCHECK or an orchestrator) and info. show-details: when_authorized means an anonymous probe sees
@@ -78,3 +139,24 @@ server:
   port: ${GATEWAY_PORT:8081}
   servlet:
     context-path: /api
+
+---
+# THE NO-DATABASE PROFILE. Test scaffolding, never a deployment role.
+#
+# Boots the web layer, the envelope advice and the security chain with no persistence at all, so the
+# assertions that have nothing to do with a database do not need one. That keeps a fast test fast, and —
+# more usefully — keeps a real guard alive: if a future module drags a datasource requirement into the web
+# path, this context stops starting and the failure appears in a unit test rather than in production.
+#
+# The three exclusions are the whole trick. No DataSource means no EntityManagerFactory, which means no
+# connection attempt at startup. Note the Spring Boot 4 package names: jdbc and hibernate autoconfiguration
+# moved out of org.springframework.boot.autoconfigure into their own modules.
+spring:
+  config:
+    activate:
+      on-profile: no-database
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration

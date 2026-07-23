@@ -1,0 +1,102 @@
+package tz.co.otapp.buscore.identityaccess.internal.domain.enums;
+
+import tz.co.otapp.buscore.apicontracts.error.ErrorCode;
+
+/**
+ * The failure conditions this module can report.
+ *
+ * <p>Module-private: the <em>enum</em> is an implementation detail, while the <em>string</em> it produces
+ * is the contract a client branches on. Nothing outside this module needs the type.
+ *
+ * <h2>The tension these codes have to resolve</h2>
+ *
+ * <p>Two rules pull in opposite directions here, and getting the balance wrong is a real vulnerability
+ * rather than an inconvenience.
+ *
+ * <p><b>Distinct causes get distinct codes</b>, because a caller who cannot tell why they were refused
+ * cannot act on it and a support process cannot route the ticket.
+ *
+ * <p><b>But a login must not be an oracle.</b> If an unknown username and a wrong password answer
+ * differently, the login form becomes a free tool for discovering which accounts exist — and account
+ * existence is the first thing an attacker wants.
+ *
+ * <p>So the sign-in path resolves it deliberately: <b>one code, {@link #INVALID_CREDENTIALS}, covers
+ * unknown username, wrong password, and every non-active account status.</b> Three quite different
+ * internal situations, one indistinguishable answer.
+ *
+ * <p>{@link #ACCOUNT_LOCKED} is the one considered exception, and it is a trade rather than an oversight —
+ * see its own note.
+ */
+public enum IdentityErrors implements ErrorCode {
+
+    /**
+     * The credentials were not accepted.
+     *
+     * <p><b>Deliberately covers several distinct causes:</b> no such username, wrong password, and an
+     * account that is pending, suspended or blocked. They must remain indistinguishable — including in
+     * timing where practical, which is why the password is verified even when the account is known to be
+     * unusable rather than short-circuited.
+     */
+    INVALID_CREDENTIALS(401, "Those credentials are not valid."),
+
+    /**
+     * Too many consecutive failures; the account is locked for a period.
+     *
+     * <p><b>This one is distinguishable, and that is a considered trade.</b> It leaks existence: an
+     * attacker who guesses a username and fails five times learns the account is real — and denies that
+     * person access in the process.
+     *
+     * <p>It is accepted because these are internal staff usernames rather than public sign-ups, and
+     * because the alternative has a concrete operational cost: an employee told only "credentials not
+     * valid" retries, deepens the lock, and calls support. Telling them the truth is worth more here than
+     * the enumeration it permits.
+     *
+     * <p>The mitigation is rate limiting, which arrives in a later slice. If this module is ever exposed to
+     * public self-registration, revisit this decision first.
+     */
+    ACCOUNT_LOCKED(423, "This account is temporarily locked. Try again later."),
+
+    /**
+     * The password is valid but must be changed before the account can be used.
+     *
+     * <p>Distinguishable on purpose, and safe to be: reaching it requires already having presented the
+     * correct password, so it discloses nothing the caller did not already prove they knew.
+     *
+     * <p><b>No token is issued with this refusal.</b> Returning one "just so the change endpoint can be
+     * called" would defeat the point — the account would be fully usable while nominally requiring a
+     * rotation.
+     */
+    PASSWORD_CHANGE_REQUIRED(409, "Your password must be changed before you can continue."),
+
+    /**
+     * The request carries no valid authentication.
+     *
+     * <p>Distinct from {@link #INVALID_CREDENTIALS}: that one answers "your username and password were
+     * rejected", this one answers "you presented no usable token". Different remedies — sign in, versus
+     * refresh or re-attach the header.
+     */
+    NOT_AUTHENTICATED(401, "Authentication is required.");
+
+    private final int status;
+    private final String defaultMessage;
+
+    IdentityErrors(int status, String defaultMessage) {
+        this.status = status;
+        this.defaultMessage = defaultMessage;
+    }
+
+    @Override
+    public String domain() {
+        return "AUTH";
+    }
+
+    @Override
+    public int status() {
+        return status;
+    }
+
+    @Override
+    public String defaultMessage() {
+        return defaultMessage;
+    }
+}
