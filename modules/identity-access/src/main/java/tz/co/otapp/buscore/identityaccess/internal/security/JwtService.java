@@ -78,6 +78,14 @@ public class JwtService {
      */
     private static final String CLAIM_PERMISSIONS = "prm";
 
+    /**
+     * The operators a staff member serves.
+     *
+     * <p>Carried so the scope resolver needs no database read. Same snapshot caveat as the permissions:
+     * an operator unlinked after sign-in stays reachable until the token expires.
+     */
+    private static final String CLAIM_OPERATORS = "ops";
+
     private final JwtEncoder encoder;
     private final JwtDecoder decoder;
     private final Duration accessTokenTtl;
@@ -128,6 +136,7 @@ public class JwtService {
                 // parser that must cope with a missing claim eventually copes by assuming a default.
                 .claim(CLAIM_TENANCY, principal.tenancy() == null ? null : principal.tenancy().name())
                 .claim(CLAIM_PERMISSIONS, List.copyOf(principal.permissions()))
+                .claim(CLAIM_OPERATORS, principal.operatorUids().stream().map(UUID::toString).toList())
                 .build();
 
         String token = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
@@ -150,10 +159,12 @@ public class JwtService {
             String tenancyClaim = jwt.getClaimAsString(CLAIM_TENANCY);
             StaffTenancy tenancy = tenancyClaim == null ? null : StaffTenancy.valueOf(tenancyClaim);
             List<String> permissions = jwt.getClaimAsStringList(CLAIM_PERMISSIONS);
+            List<String> operators = jwt.getClaimAsStringList(CLAIM_OPERATORS);
             return Optional.of(new Principal(
                     UUID.fromString(jwt.getSubject()),
                     type,
                     tenancy,
+                    operators == null ? List.of() : operators.stream().map(UUID::fromString).toList(),
                     permissions == null ? Set.of() : Set.copyOf(permissions)));
         } catch (JwtException | IllegalArgumentException | NullPointerException unusableToken) {
             // IllegalArgumentException covers an unparseable uuid or an unrecognised principal type — the

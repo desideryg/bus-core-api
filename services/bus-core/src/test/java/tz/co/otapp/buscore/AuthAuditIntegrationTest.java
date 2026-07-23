@@ -205,8 +205,8 @@ class AuthAuditIntegrationTest {
     private void givenStaff(String username) {
         jdbc.update("""
                 INSERT INTO staff_identities (uid, username, email, display_name, tenancy, status,
-                                              created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'ADMIN', 'ACTIVE', now(), now())
+                                              company_uid, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'ADMIN', 'ACTIVE', NULL, now(), now())
                 """, UUID.randomUUID(), username, username + "@bus-core.local", username);
         jdbc.update("""
                 INSERT INTO staff_credentials (uid, staff_identity_id, password_hash, password_updated_at,

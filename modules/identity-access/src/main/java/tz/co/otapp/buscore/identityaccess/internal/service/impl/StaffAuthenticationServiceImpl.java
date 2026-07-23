@@ -1,8 +1,10 @@
 package tz.co.otapp.buscore.identityaccess.internal.service.impl;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AuthEventType;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.IdentityErrors;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffCredentialRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffIdentityRepository;
+import tz.co.otapp.buscore.identityaccess.internal.repository.StaffOperatorRepository;
 import tz.co.otapp.buscore.identityaccess.internal.repository.StaffRoleRepository;
 import tz.co.otapp.buscore.identityaccess.internal.security.JwtService;
 import tz.co.otapp.buscore.identityaccess.internal.service.AuthAuditRecorder;
@@ -52,17 +55,20 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
     private final StaffIdentityRepository identities;
     private final StaffCredentialRepository credentials;
     private final StaffRoleRepository staffRoles;
+    private final StaffOperatorRepository staffOperators;
     private final AuthAuditRecorder auditRecorder;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PrincipalContext principalContext;
 
     public StaffAuthenticationServiceImpl(StaffIdentityRepository identities, StaffCredentialRepository credentials,
-            StaffRoleRepository staffRoles, AuthAuditRecorder auditRecorder, PasswordEncoder passwordEncoder,
+            StaffRoleRepository staffRoles, StaffOperatorRepository staffOperators,
+            AuthAuditRecorder auditRecorder, PasswordEncoder passwordEncoder,
             JwtService jwtService, PrincipalContext principalContext) {
         this.identities = identities;
         this.credentials = credentials;
         this.staffRoles = staffRoles;
+        this.staffOperators = staffOperators;
         this.auditRecorder = auditRecorder;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -142,8 +148,11 @@ public class StaffAuthenticationServiceImpl implements StaffAuthenticationServic
         // Resolved once, here, and carried in the token. Archived roles are excluded by the query, so
         // archiving a role actually withdraws it rather than only blocking future grants.
         Set<String> permissions = staffRoles.findPermissionCodes(identity);
+        // Resolved once, here. Platform staff legitimately have none — they belong to no tenancy and the
+        // scope resolver reads their tenancy before it ever looks at this list.
+        List<UUID> operatorUids = staffOperators.findOperatorUids(identity);
         JwtService.IssuedToken token = jwtService.issue(new Principal(
-                identity.getUid(), PrincipalType.STAFF, identity.getTenancy(), permissions));
+                identity.getUid(), PrincipalType.STAFF, identity.getTenancy(), operatorUids, permissions));
         audit(AuthEventType.LOGIN_SUCCESS, identity, identifier);
         log.info("sign-in succeeded for {}", identity.getUid());
         return new LoginResponse(token.token(), token.expiresAt(), identity.getDisplayName());

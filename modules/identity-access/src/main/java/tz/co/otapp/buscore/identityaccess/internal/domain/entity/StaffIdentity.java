@@ -1,5 +1,7 @@
 package tz.co.otapp.buscore.identityaccess.internal.domain.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -58,17 +60,35 @@ public class StaffIdentity extends BaseEntity {
     @Column(name = "status", nullable = false, length = 32)
     private AccountStatus status;
 
+    /**
+     * The company this person belongs to, for operator staff.
+     *
+     * <p><b>Null for everyone else, and the database enforces the equivalence:</b> a staff member has a
+     * company if and only if their tenancy is {@code OPERATOR}. Platform staff belong to no tenancy, which
+     * is exactly why they may be scoped to all of it.
+     *
+     * <p>It is also the anchor of the cross-company guard. Every operator membership carries the same
+     * value and a composite foreign key holds the two together, so one credential can never reach two
+     * companies' data — not through this application, not through a data fix, and not through a future
+     * admin surface that forgot to check.
+     *
+     * <p>A bare handle into the tenancy module: no foreign key, never joined.
+     */
+    @Column(name = "company_uid")
+    private UUID companyUid;
+
     /** JPA requires it. Not for application use — see {@link #of}. */
     protected StaffIdentity() {
     }
 
     private StaffIdentity(String username, String email, String displayName, StaffTenancy tenancy,
-            AccountStatus status) {
+            AccountStatus status, UUID companyUid) {
         this.username = username;
         this.email = email;
         this.displayName = displayName;
         this.tenancy = tenancy;
         this.status = status;
+        this.companyUid = companyUid;
     }
 
     /**
@@ -78,8 +98,19 @@ public class StaffIdentity extends BaseEntity {
      * and no way to construct a half-populated row that only fails at flush time.
      */
     public static StaffIdentity of(String username, String email, String displayName, StaffTenancy tenancy,
-            AccountStatus status) {
-        return new StaffIdentity(username, email, displayName, tenancy, status);
+            AccountStatus status, UUID companyUid) {
+        return new StaffIdentity(username, email, displayName, tenancy, status, companyUid);
+    }
+
+    /**
+     * A staff member who belongs to no company — platform or partner.
+     *
+     * <p>A named factory rather than passing null, so the two cases read differently at the call site and
+     * nobody has to remember which argument the null was for.
+     */
+    public static StaffIdentity ofPlatform(String username, String email, String displayName,
+            StaffTenancy tenancy, AccountStatus status) {
+        return new StaffIdentity(username, email, displayName, tenancy, status, null);
     }
 
     /**
@@ -110,5 +141,10 @@ public class StaffIdentity extends BaseEntity {
 
     public AccountStatus getStatus() {
         return status;
+    }
+
+    /** Null for anyone who is not operator staff. */
+    public UUID getCompanyUid() {
+        return companyUid;
     }
 }

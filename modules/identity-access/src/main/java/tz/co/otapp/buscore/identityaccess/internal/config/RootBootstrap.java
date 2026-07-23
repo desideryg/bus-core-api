@@ -91,7 +91,7 @@ public class RootBootstrap implements ApplicationRunner {
         }
 
         try {
-            StaffIdentity root = identities.save(StaffIdentity.of(
+            StaffIdentity root = identities.save(StaffIdentity.ofPlatform(
                     username, email, "Root", StaffTenancy.ROOT, AccountStatus.ACTIVE));
             credentials.save(StaffCredential.of(root, passwordEncoder.encode(password), true));
             log.warn("Created the break-glass ROOT account '{}'. It must change its password at first "
