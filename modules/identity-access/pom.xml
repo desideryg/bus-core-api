@@ -49,6 +49,28 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--
+          Authentication and the filter chain. This module owns the security configuration for the whole
+          application, because it is the module that knows what a principal is.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!--
+          JWT encode/decode, via Spring Security's Nimbus integration.
+
+          Chosen over adding a separate JWT library, and emphatically over hand-rolling: signing and
+          verification are exactly the code where a subtle mistake produces something that looks like it
+          works. Nimbus is what Spring Security itself uses, so there is one implementation on the
+          classpath rather than two with slightly different opinions about claim validation.
+        -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

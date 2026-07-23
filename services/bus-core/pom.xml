@@ -25,6 +25,30 @@
       occupy a thread a customer is waiting on); what one artifact buys is one build, one version, and
       one image to promote.
     -->
+    <!--
+      Testcontainers is not on Spring Boot's managed dependency list, so the version has to come from
+      somewhere. The BOM pins every org.testcontainers artifact to one coherent version, which matters
+      because mixing them produces failures that look like Docker problems rather than version problems.
+
+      Kept here rather than in the reactor root: only the deployable runs integration tests against a
+      container today, and a version pinned globally is a version every module inherits an opinion about.
+
+      1.21.4 for its docker-java, which negotiates a modern Docker API. Older lines negotiate API 1.32 and
+      are rejected outright by newer Docker daemons with "client version is too old" — an error that reads
+      like a broken Docker install rather than a stale test dependency.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>1.21.4</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!--
           The two universal leaves, and for now the ONLY internal edges. Every other module is an empty
@@ -41,9 +65,52 @@
             <artifactId>api-contracts</artifactId>
         </dependency>
 
+        <!--
+          identity-access joins the deployable with its first vertical slice, exactly as the module rules
+          describe: a module is assembled when it has something to serve, never when its directory is
+          created. It brings the entities Hibernate must validate, the migrations Flyway must apply, the
+          security filter chain, and the sign-in routes.
+        -->
+        <dependency>
+            <groupId>tz.co.otapp.buscore</groupId>
+            <artifactId>identity-access</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!--
+          PERSISTENCE ARRIVES HERE, and with it the end of "boots against an empty machine". Until this
+          slice the deployable deliberately carried no JPA at all so it could start with nothing running;
+          now it owns entities and a schema, so a database is a genuine prerequisite. The smoke test is
+          split rather than weakened — see BusCoreSmokeTest and StaffLoginIntegrationTest.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!--
+          BOTH Flyway artifacts are required, and this is the trap the root pom warns about: flyway-core
+          carries the engine, flyway-database-postgresql carries the PostgreSQL dialect. With only the
+          first, startup fails with "Unsupported Database: PostgreSQL" — which reads like a version
+          mismatch and is not one. Versions come from the root pom.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!--
@@ -87,6 +154,32 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+          Testcontainers, so the integration test runs against a REAL PostgreSQL 18 that it starts and
+          throws away. Deliberately not the developer's own database: a test that writes to a shared
+          instance leaves rows behind, fails differently depending on what ran before it, and cannot be
+          trusted on CI where that instance does not exist.
+
+          It is also the only way this test proves what it claims. Running against an already-migrated
+          database would never exercise the migration; against an empty container, a broken migration or an
+          entity that disagrees with the DDL fails immediately.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
