@@ -139,8 +139,8 @@ public class JwtService {
 
         // A NULL TENANCY IS OMITTED, NOT WRITTEN AS NULL. The builder rejects a null value outright — and
         // this line was unreachable until agents existed, because every principal before them had a
-        // tenancy, so the failure sat here from slice 1 and surfaced as a 500 on the very first agent
-        // sign-in.
+        // tenancy, so the failure sat here from slice 2 (where the claim was first written) and surfaced as
+        // a 500 on the very first agent sign-in.
         //
         // Omitting is the right repair rather than a workaround: #parse already reads a missing tenancy
         // claim as null, so the two sides agree, and "the claim is absent" is exactly what "this actor
