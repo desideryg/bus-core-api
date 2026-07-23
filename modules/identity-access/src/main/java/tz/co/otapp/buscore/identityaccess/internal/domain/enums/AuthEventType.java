@@ -54,6 +54,9 @@ public enum AuthEventType implements DescribedEnum {
     /** Access was returned. */
     STAFF_RESTORED("Staff access restored", "A withdrawn staff account was returned to use."),
 
+    /** An account's editable details — its display name — were changed. */
+    STAFF_UPDATED("Staff account updated", "A staff account's display name was changed."),
+
     /**
      * A staff member gained reach over another operator.
      *

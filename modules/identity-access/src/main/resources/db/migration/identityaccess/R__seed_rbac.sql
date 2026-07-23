@@ -24,6 +24,7 @@ VALUES
     (gen_random_uuid(), 'PERMISSION.READ', 'See the catalog of permissions, to compose a role.',     now(), now()),
     (gen_random_uuid(), 'STAFF.READ',      'See staff accounts other than one''s own.',              now(), now()),
     (gen_random_uuid(), 'STAFF.CREATE',    'Create a staff account.',                                now(), now()),
+    (gen_random_uuid(), 'STAFF.UPDATE',    'Edit a staff account''s display name.',                  now(), now()),
     (gen_random_uuid(), 'STAFF.SUSPEND',   'Withdraw a staff member''s access, for now or for good.', now(), now()),
     (gen_random_uuid(), 'STAFF.RESTORE',   'Return a withdrawn staff account to use.',               now(), now()),
     (gen_random_uuid(), 'STAFF.OPERATOR_LINK',
@@ -81,8 +82,8 @@ INSERT INTO role_permissions (uid, role_id, permission_id, created_at, updated_a
 SELECT gen_random_uuid(), r.id, p.id, now(), now()
 FROM roles r
          JOIN permissions p ON p.code IN ('ROLE.READ', 'ROLE.GRANT', 'ROLE.REVOKE', 'PERMISSION.READ',
-                                          'STAFF.READ', 'STAFF.CREATE', 'STAFF.SUSPEND', 'STAFF.RESTORE',
-                                          'STAFF.OPERATOR_LINK', 'STAFF.OPERATOR_UNLINK',
+                                          'STAFF.READ', 'STAFF.CREATE', 'STAFF.UPDATE', 'STAFF.SUSPEND',
+                                          'STAFF.RESTORE', 'STAFF.OPERATOR_LINK', 'STAFF.OPERATOR_UNLINK',
                                           'STAFF.PASSWORD_RESET')
 WHERE r.code = 'PLATFORM_ADMIN'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
@@ -100,8 +101,8 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO role_permissions (uid, role_id, permission_id, created_at, updated_at)
 SELECT gen_random_uuid(), r.id, p.id, now(), now()
 FROM roles r
-         JOIN permissions p ON p.code IN ('ROLE.READ', 'STAFF.READ', 'STAFF.CREATE', 'STAFF.SUSPEND',
-                                          'STAFF.RESTORE', 'STAFF.OPERATOR_LINK', 'STAFF.OPERATOR_UNLINK',
-                                          'STAFF.PASSWORD_RESET')
+         JOIN permissions p ON p.code IN ('ROLE.READ', 'STAFF.READ', 'STAFF.CREATE', 'STAFF.UPDATE',
+                                          'STAFF.SUSPEND', 'STAFF.RESTORE', 'STAFF.OPERATOR_LINK',
+                                          'STAFF.OPERATOR_UNLINK', 'STAFF.PASSWORD_RESET')
 WHERE r.code = 'OPERATOR_ADMIN'
 ON CONFLICT (role_id, permission_id) DO NOTHING;

@@ -19,6 +19,7 @@ import tz.co.otapp.buscore.identityaccess.StaffTenancy;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.CreateStaffRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.StaffView;
 import tz.co.otapp.buscore.identityaccess.internal.domain.dto.SuspendStaffRequest;
+import tz.co.otapp.buscore.identityaccess.internal.domain.dto.UpdateStaffRequest;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffIdentity;
 import tz.co.otapp.buscore.identityaccess.internal.domain.entity.StaffOperator;
 import tz.co.otapp.buscore.identityaccess.internal.domain.enums.AccountStatus;
@@ -127,6 +128,23 @@ public class StaffAdministrationServiceImpl implements StaffAdministrationServic
             return request.companyUid();
         }
         return null;
+    }
+
+    // ─────────────────────────────── editing ───────────────────────────────
+
+    @Override
+    public StaffView update(UUID staffUid, UpdateStaffRequest request) {
+        StaffIdentity actor = actingAdministrator();
+        StaffIdentity target = requireAdministrable(staffUid);
+
+        // Only the display name moves. The username and email are fixed after provisioning — see
+        // UpdateStaffRequest — so there is one field to set and no partial-update shape to reason about.
+        target.changeDisplayName(request.displayName().trim());
+        identities.save(target);
+
+        auditRecorder.record(AuthEventType.STAFF_UPDATED, PrincipalType.STAFF, staffUid, target.getUsername());
+        log.info("{} updated staff account {}", actor.getUid(), staffUid);
+        return StaffView.of(target);
     }
 
     // ───────────────────────────────── reading ─────────────────────────────────
